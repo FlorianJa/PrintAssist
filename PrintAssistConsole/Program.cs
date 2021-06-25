@@ -5,6 +5,8 @@ using Google.Cloud.Dialogflow.V2;
 using Google.Cloud.Storage.V1;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Auth;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration.Json;
 using PrintAssistConsole.Intents;
 using PrintAssistConsole.Utilies;
 using System;
@@ -28,48 +30,64 @@ namespace PrintAssistConsole
     {
         private static TelegramBotClient Bot;
         public static Dictionary<string, ProcessDelegate> IntentHandlers { get; private set; }
+
+        public static CancellationTokenSource cts = new CancellationTokenSource();
+
         public static async Task Main()
         {
-            SetupIntentMapping();
+            IConfiguration Configuration = new ConfigurationBuilder()
+            .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+            .Build();
+
+            //Configuration.GetValue<string>("asdf");
+
+            SetupIntentMapping("printassist-jxgl");
 
             Bot = new TelegramBotClient(TelegramBotConfiguration.BotToken);
-
             var me = await Bot.GetMeAsync();
-            Console.Title = me.Username;
-
-            var cts = new CancellationTokenSource();
-
             // StartReceiving does not block the caller thread. Receiving is done on the ThreadPool.
-            Bot.StartReceiving(new DefaultUpdateHandler(HandleUpdateAsync, HandleErrorAsync),
-                               cts.Token);
+            Bot.StartReceiving(new DefaultUpdateHandler(HandleUpdateAsync, HandleErrorAsync), cts.Token);
 
             Console.WriteLine($"Start listening for @{me.Username}");
-            Console.ReadLine();
-
-            // Send cancellation request to stop bot
-            cts.Cancel();
+            Console.WriteLine("Press CTRL+C to exit.");
+            
+            Console.CancelKeyPress += Console_CancelKeyPress;
+            while (true)
+            {
+                Thread.Sleep(100);
+            }
         }
 
-        private static void SetupIntentMapping()
+        private static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
+        {
+            // Send cancellation request to stop bot
+            cts.Cancel();
+            System.Environment.Exit(0);
+        }
+
+        private static void SetupIntentMapping(string agentId)
         {
             IntentHandlers = new Dictionary<string, ProcessDelegate>();
 
             //Get all types with custom attribute IntentAttribute in assembly
-            var typesWithMyAttribute =
+            var intentClasses =
             from a in AppDomain.CurrentDomain.GetAssemblies()
             from t in a.GetTypes()
             let attributes = t.GetCustomAttributes(typeof(IntentAttribute), true)
             where attributes != null && attributes.Length > 0
             select new { Type = t, Attributes = attributes.Cast<IntentAttribute>() };
 
-            foreach (var type in typesWithMyAttribute)
+            foreach (var type in intentClasses)
             {
+                //get intent name from attribute
                 var intentName = ((IntentAttribute)(Attribute.GetCustomAttribute(type.Type, typeof(IntentAttribute)))).IntentName;
-
+                
+                //get method info for Process method
                 var mi = type.Type.GetMethod("Process", BindingFlags.Public | BindingFlags.Static);
-
+                
                 if (mi != null)
                 {
+                    //store intent name and connected Process method in dictionary
                     IntentHandlers.Add(intentName, (ProcessDelegate)mi.CreateDelegate(typeof(ProcessDelegate), null));
                 }
                 else
@@ -78,9 +96,10 @@ namespace PrintAssistConsole
                 }
             }
 
-            var intents = GetAllIntentsForAgent("printassist-jxgl");
+            var intents = GetAllIntentsForAgent(agentId);
             foreach (var intent in intents)
             {
+                //check if all intents are implemented
                 if(!IntentHandlers.ContainsKey(intent.DisplayName))
                 {
                     Console.WriteLine("No class for " + intent.DisplayName);
@@ -133,7 +152,6 @@ namespace PrintAssistConsole
                     await Bot.SendTextMessageAsync(chatId: update.Message.Chat.Id,
                                                     text: text,
                                                     replyMarkup: new ReplyKeyboardRemove());
-                    //await handler;
                 }
                 catch (Exception exception)
                 {
