@@ -1,4 +1,5 @@
-﻿using Google.Api.Gax.Grpc;
+﻿using Google.Api.Gax;
+using Google.Api.Gax.Grpc;
 using Google.Apis.Auth.OAuth2;
 using Google.Cloud.Dialogflow.V2;
 using Google.Cloud.Storage.V1;
@@ -21,27 +22,15 @@ using Telegram.Bot.Types.ReplyMarkups;
 
 namespace PrintAssistConsole
 {
+    public delegate string ProcessDelegate(DetectIntentResponse response);
+
     class Program
     {
         private static TelegramBotClient Bot;
-        public static Dictionary<string, MethodInfo> IntentHandlers { get; private set; }
+        public static Dictionary<string, ProcessDelegate> IntentHandlers { get; private set; }
         public static async Task Main()
         {
-
-            var typesWithMyAttribute =
-            from a in AppDomain.CurrentDomain.GetAssemblies()
-            from t in a.GetTypes()
-            let attributes = t.GetCustomAttributes(typeof(IntentAttribute), true)
-            where attributes != null && attributes.Length > 0
-            select new { Type = t, Attributes = attributes.Cast<IntentAttribute>() };
-
-
-            IntentHandlers = new Dictionary<string, MethodInfo>();
-            foreach (var type in typesWithMyAttribute)
-            {
-                var intentName = ((IntentAttribute)(Attribute.GetCustomAttribute(type.Type, typeof(IntentAttribute)))).IntentName;
-                IntentHandlers.Add(intentName, type.Type.GetMethod("Process"));
-            }
+            SetupIntentMapping();
 
             Bot = new TelegramBotClient(TelegramBotConfiguration.BotToken);
 
@@ -59,6 +48,62 @@ namespace PrintAssistConsole
 
             // Send cancellation request to stop bot
             cts.Cancel();
+        }
+
+        private static void SetupIntentMapping()
+        {
+            IntentHandlers = new Dictionary<string, ProcessDelegate>();
+
+            //Get all types with custom attribute IntentAttribute in assembly
+            var typesWithMyAttribute =
+            from a in AppDomain.CurrentDomain.GetAssemblies()
+            from t in a.GetTypes()
+            let attributes = t.GetCustomAttributes(typeof(IntentAttribute), true)
+            where attributes != null && attributes.Length > 0
+            select new { Type = t, Attributes = attributes.Cast<IntentAttribute>() };
+
+            foreach (var type in typesWithMyAttribute)
+            {
+                var intentName = ((IntentAttribute)(Attribute.GetCustomAttribute(type.Type, typeof(IntentAttribute)))).IntentName;
+
+                var mi = type.Type.GetMethod("Process", BindingFlags.Public | BindingFlags.Static);
+
+                if (mi != null)
+                {
+                    IntentHandlers.Add(intentName, (ProcessDelegate)mi.CreateDelegate(typeof(ProcessDelegate), null));
+                }
+                else
+                {
+                    throw new NotImplementedException("Process method is not implemented for class: " + type.Type.Name);
+                }
+            }
+
+            var intents = GetAllIntentsForAgent("printassist-jxgl");
+            foreach (var intent in intents)
+            {
+                if(!IntentHandlers.ContainsKey(intent.DisplayName))
+                {
+                    Console.WriteLine("No class for " + intent.DisplayName);
+                }
+            }
+        }
+
+        private static Page<Intent> GetAllIntentsForAgent(string agentId)
+        {
+            ListIntentsRequest request = new ListIntentsRequest
+            {
+                Parent = "projects/"+ agentId + "/agent"
+            };
+
+            IntentsClient client = new IntentsClientBuilder
+            {
+                CredentialsPath = @"C:\Users\Florian\DF-APIKEY-printassist.json"
+            }.Build();
+
+            var intents = client.ListIntents(request);
+
+            //ToDo: check if there are more than 100 intents
+            return intents.ReadPage(100);
         }
 
         public static async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
@@ -128,21 +173,22 @@ namespace PrintAssistConsole
             var sessionId = message.Chat.Id;
             var agent = "printassist-jxgl";
 
-            var reponse = await client.DetectIntentAsync(
+            var response = await client.DetectIntentAsync(
                 new SessionName(agent, sessionId.ToString()),
                 query
             );
 
 
-            MethodInfo methodInfo;
+            ProcessDelegate processDelegate;
             string returnString;
-            if (IntentHandlers.TryGetValue(reponse.QueryResult.Intent.DisplayName, out methodInfo))
+            if (IntentHandlers.TryGetValue(response.QueryResult.Intent.DisplayName, out processDelegate))
             {
-                if (methodInfo != null)
+                if (processDelegate != null)
                 {
                     try
                     {
-                        returnString = (string)methodInfo.Invoke(null, new object[] { reponse });
+                        returnString = processDelegate(response);
+                        //returnString = (string)processDelegate.Invoke(null, new object[] { reponse });
                     }
                     catch (Exception)
                     {

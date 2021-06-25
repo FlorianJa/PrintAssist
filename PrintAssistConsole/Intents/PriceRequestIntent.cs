@@ -8,9 +8,15 @@ using System.Threading.Tasks;
 
 namespace PrintAssistConsole.Intents
 {
-    [IntentAttribute("Default Welcome Intent")]
-    public class WelcomeIntent
+    [IntentAttribute("PreisAnfrage")]
+    public class PriceRequestIntent
     {
-        public static string Process(DetectIntentResponse response) { throw new NotImplementedException(); }
+        public static string Process(DetectIntentResponse response)
+        {
+            throw new NotImplementedException();
+        }
     }
+
+
+    
 }

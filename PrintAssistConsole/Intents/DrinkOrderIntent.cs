@@ -10,9 +10,9 @@ using System.Threading.Tasks;
 namespace PrintAssistConsole.Intents
 {
     [IntentAttribute("GetränkeBestellung")]
-    public class DrinkOrderIntent : BaseIntent
+    public class DrinkOrderIntent
     {
-        public static new string Process(DetectIntentResponse response)
+        public static string Process(DetectIntentResponse response)
         {
             var getraenke = new Value();
             var amount = new Value();
