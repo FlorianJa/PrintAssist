@@ -28,25 +28,30 @@ namespace PrintAssistConsole
 
     class Program
     {
-        private static TelegramBotClient Bot;
-        public static Dictionary<string, ProcessDelegate> IntentHandlers { get; private set; }
-
-        public static CancellationTokenSource cts = new CancellationTokenSource();
+        private static TelegramBotClient bot;
+        private static Dictionary<string, ProcessDelegate> intentHandlers;
+        private static IUserRepo users;
+        private static CancellationTokenSource cts = new CancellationTokenSource();
+        private static IConfiguration configuration;
+        private static string agentId;
+        private static string dialogFlowAPIKeyFile;
 
         public static async Task Main()
         {
-            IConfiguration Configuration = new ConfigurationBuilder()
+            configuration = new ConfigurationBuilder()
             .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
             .Build();
+            agentId = configuration.GetValue<string>("AgentId");
+            dialogFlowAPIKeyFile = configuration.GetValue<string>("DialogFlowAPIFile");
 
-            //Configuration.GetValue<string>("asdf");
+            users = new RamUserRepo();
 
-            SetupIntentMapping("printassist-jxgl");
+            SetupIntentMapping(agentId);
 
-            Bot = new TelegramBotClient(TelegramBotConfiguration.BotToken);
-            var me = await Bot.GetMeAsync();
-            // StartReceiving does not block the caller thread. Receiving is done on the ThreadPool.
-            Bot.StartReceiving(new DefaultUpdateHandler(HandleUpdateAsync, HandleErrorAsync), cts.Token);
+            bot = new TelegramBotClient(TelegramBotConfiguration.BotToken);
+            var me = await bot.GetMeAsync();
+            bot.StartReceiving(new DefaultUpdateHandler(HandleUpdateAsync, HandleErrorAsync), cts.Token);
+
 
             Console.WriteLine($"Start listening for @{me.Username}");
             Console.WriteLine("Press CTRL+C to exit.");
@@ -67,7 +72,7 @@ namespace PrintAssistConsole
 
         private static void SetupIntentMapping(string agentId)
         {
-            IntentHandlers = new Dictionary<string, ProcessDelegate>();
+            intentHandlers = new Dictionary<string, ProcessDelegate>();
 
             //Get all types with custom attribute IntentAttribute in assembly
             var intentClasses =
@@ -88,7 +93,7 @@ namespace PrintAssistConsole
                 if (mi != null)
                 {
                     //store intent name and connected Process method in dictionary
-                    IntentHandlers.Add(intentName, (ProcessDelegate)mi.CreateDelegate(typeof(ProcessDelegate), null));
+                    intentHandlers.Add(intentName, (ProcessDelegate)mi.CreateDelegate(typeof(ProcessDelegate), null));
                 }
                 else
                 {
@@ -100,7 +105,7 @@ namespace PrintAssistConsole
             foreach (var intent in intents)
             {
                 //check if all intents are implemented
-                if(!IntentHandlers.ContainsKey(intent.DisplayName))
+                if(!intentHandlers.ContainsKey(intent.DisplayName))
                 {
                     Console.WriteLine("No class for " + intent.DisplayName);
                 }
@@ -127,37 +132,69 @@ namespace PrintAssistConsole
 
         public static async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
-
-            //var handler = update.Type switch
-            //{
-            //    // UpdateType.Unknown:
-            //    // UpdateType.ChannelPost:
-            //    // UpdateType.EditedChannelPost:
-            //    // UpdateType.ShippingQuery:
-            //    // UpdateType.PreCheckoutQuery:
-            //    // UpdateType.Poll:
-            //    UpdateType.Message => CallDFAPIAsync(update.Message.Text),
-            //    //UpdateType.EditedMessage => BotOnMessageReceived(update.Message),
-            //    //UpdateType.CallbackQuery => BotOnCallbackQueryReceived(update.CallbackQuery),
-            //    //UpdateType.InlineQuery => BotOnInlineQueryReceived(update.InlineQuery),
-            //    //UpdateType.ChosenInlineResult => BotOnChosenInlineResultReceived(update.ChosenInlineResult),
-            //    //_ => UnknownUpdateHandlerAsync(update)
-            //};
             if (update.Type == UpdateType.Message)
             {
-                try
+                if (update.Message.EntityValues != null) //is command
                 {
-                    await Bot.SendChatActionAsync(update.Message.Chat.Id, ChatAction.Typing);
-                    var text = await CallDFAPIAsync(update.Message);
-                    await Bot.SendTextMessageAsync(chatId: update.Message.Chat.Id,
-                                                    text: text,
-                                                    replyMarkup: new ReplyKeyboardRemove());
+                    if (update.Message.EntityValues.FirstOrDefault().Equals("/start"))
+                    {
+                        await SendWelcomeMessageAsync(update);
+                        users.AddUser(update.Message.Chat.Id, new Classes.User(update.Message.Chat.Id) { CurrentState = UserState.WaitingForUserName});
+                    }
                 }
-                catch (Exception exception)
+                else
                 {
-                    await HandleErrorAsync(botClient, exception, cancellationToken);
+                    var user = users.GetUserById(update.Message.Chat.Id);
+                    
+                    if(user != null)
+                    {
+                        if(user.CurrentState == UserState.WaitingForUserName)
+                        {
+                            await SendNameResponseMessage(update, user);
+                        }
+                        else
+                        {
+                            try
+                            {
+                                await bot.SendChatActionAsync(update.Message.Chat.Id, ChatAction.Typing);
+
+                                var response = await CallDFAPIAsync(update.Message);
+
+                                var text = ProcessIntent(response);
+                                
+                                await bot.SendTextMessageAsync(chatId: update.Message.Chat.Id,
+                                                                text: text,
+                                                                replyMarkup: new ReplyKeyboardRemove());
+                            }
+                            catch (Exception exception)
+                            {
+                                await HandleErrorAsync(botClient, exception, cancellationToken);
+                            }
+                        }
+                    }
                 }
             }
+        }
+
+        private static async Task SendNameResponseMessage(Update update, Classes.User user)
+        {
+            var text = "Hi " + update.Message.Text + ". Was kann ich für dich tun?";
+            user.CurrentState = UserState.Idle;
+            user.Name = update.Message.Text;
+            await bot.SendTextMessageAsync(chatId: update.Message.Chat.Id,
+                            text: text,
+                            replyMarkup: new ReplyKeyboardRemove());
+        }
+
+        private static async Task SendWelcomeMessageAsync(Update update)
+        {
+            await bot.SendChatActionAsync(update.Message.Chat.Id, ChatAction.Typing);
+
+            var text = "Welcome Message: My name is Bot. I can do stuff. How should i call you?";
+
+            await bot.SendTextMessageAsync(chatId: update.Message.Chat.Id,
+                                            text: text,
+                                            replyMarkup: new ReplyKeyboardRemove());
         }
 
         public static Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
@@ -172,7 +209,7 @@ namespace PrintAssistConsole
             return Task.CompletedTask;
         }
 
-        public static async Task<String> CallDFAPIAsync(Telegram.Bot.Types.Message message)
+        public static async Task<DetectIntentResponse> CallDFAPIAsync(Telegram.Bot.Types.Message message)
         {
             var query = new QueryInput
             {
@@ -185,28 +222,32 @@ namespace PrintAssistConsole
 
             SessionsClient client = new SessionsClientBuilder
             {
-                CredentialsPath = @"C:\Users\Florian\DF-APIKEY-printassist.json"
+                CredentialsPath = dialogFlowAPIKeyFile
             }.Build();
 
             var sessionId = message.Chat.Id;
-            var agent = "printassist-jxgl";
-
             var response = await client.DetectIntentAsync(
-                new SessionName(agent, sessionId.ToString()),
+                new SessionName(agentId, sessionId.ToString()),
                 query
             );
+            return response;
+        }
 
-
+        private static string ProcessIntent(DetectIntentResponse response)
+        {
             ProcessDelegate processDelegate;
             string returnString;
-            if (IntentHandlers.TryGetValue(response.QueryResult.Intent.DisplayName, out processDelegate))
+            if (intentHandlers.TryGetValue(response.QueryResult.Intent.DisplayName, out processDelegate))
             {
                 if (processDelegate != null)
                 {
                     try
                     {
                         returnString = processDelegate(response);
-                        //returnString = (string)processDelegate.Invoke(null, new object[] { reponse });
+                    }
+                    catch (NotImplementedException ex)
+                    {
+                        returnString = ex.Message;
                     }
                     catch (Exception)
                     {
