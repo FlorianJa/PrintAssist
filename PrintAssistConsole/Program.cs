@@ -7,11 +7,13 @@ using Google.Protobuf.WellKnownTypes;
 using Grpc.Auth;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.Json;
+using PrintAssistConsole.Classes;
 using PrintAssistConsole.Intents;
 using PrintAssistConsole.Utilies;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -24,12 +26,13 @@ using Telegram.Bot.Types.ReplyMarkups;
 
 namespace PrintAssistConsole
 {
-    public delegate string ProcessDelegate(DetectIntentResponse response);
+    public delegate string ProcessDelegate();
 
     class Program
     {
         private static TelegramBotClient bot;
         private static Dictionary<string, ProcessDelegate> intentHandlers;
+        private static Dictionary<string, System.Type> intentMap;
         private static IUserRepo users;
         private static CancellationTokenSource cts = new CancellationTokenSource();
         private static IConfiguration configuration;
@@ -55,7 +58,7 @@ namespace PrintAssistConsole
 
             Console.WriteLine($"Start listening for @{me.Username}");
             Console.WriteLine("Press CTRL+C to exit.");
-            
+
             Console.CancelKeyPress += Console_CancelKeyPress;
             while (true)
             {
@@ -73,7 +76,7 @@ namespace PrintAssistConsole
         private static void SetupIntentMapping(string agentId)
         {
             intentHandlers = new Dictionary<string, ProcessDelegate>();
-
+            intentMap = new Dictionary<string, System.Type>();
             //Get all types with custom attribute IntentAttribute in assembly
             var intentClasses =
             from a in AppDomain.CurrentDomain.GetAssemblies()
@@ -84,12 +87,14 @@ namespace PrintAssistConsole
 
             foreach (var type in intentClasses)
             {
+
                 //get intent name from attribute
                 var intentName = ((IntentAttribute)(Attribute.GetCustomAttribute(type.Type, typeof(IntentAttribute)))).IntentName;
-                
+                intentMap.Add(intentName, type.Type);
+
                 //get method info for Process method
-                var mi = type.Type.GetMethod("Process", BindingFlags.Public | BindingFlags.Static);
-                
+                var mi = type.Type.GetMethod("Process", BindingFlags.Public| BindingFlags.Instance);
+
                 if (mi != null)
                 {
                     //store intent name and connected Process method in dictionary
@@ -105,7 +110,7 @@ namespace PrintAssistConsole
             foreach (var intent in intents)
             {
                 //check if all intents are implemented
-                if(!intentHandlers.ContainsKey(intent.DisplayName))
+                if (!intentHandlers.ContainsKey(intent.DisplayName))
                 {
                     Console.WriteLine("No class for " + intent.DisplayName);
                 }
@@ -116,7 +121,7 @@ namespace PrintAssistConsole
         {
             ListIntentsRequest request = new ListIntentsRequest
             {
-                Parent = "projects/"+ agentId + "/agent"
+                Parent = "projects/" + agentId + "/agent"
             };
 
             IntentsClient client = new IntentsClientBuilder
@@ -134,46 +139,132 @@ namespace PrintAssistConsole
         {
             if (update.Type == UpdateType.Message)
             {
-                if (update.Message.EntityValues != null) //is command
+                if (update.Message.EntityValues != null) //message is a command
                 {
                     if (update.Message.EntityValues.FirstOrDefault().Equals("/start"))
                     {
-                        await SendWelcomeMessageAsync(update);
-                        users.AddUser(update.Message.Chat.Id, new Classes.User(update.Message.Chat.Id) { CurrentState = UserState.WaitingForUserName});
+                        await HandleNewUserAsync(update);
                     }
                 }
                 else
                 {
                     var user = users.GetUserById(update.Message.Chat.Id);
-                    
-                    if(user != null)
+
+                    if (user != null)
                     {
-                        if(user.CurrentState == UserState.WaitingForUserName)
+                        switch (user.CurrentState)
                         {
-                            await SendNameResponseMessage(update, user);
+                            case UserState.Idle:
+                                await HandleUserInputAsync(update, user, cancellationToken);
+                                break;
+                            case UserState.WaitingForUserName:
+                                await SendNameResponseMessage(update, user);
+                                break;
+                            case UserState.Unknown:
+                                break;
+                            case UserState.Tutorial:
+                                await HandleUserInputDuringTutorialAsync(update, user);
+                                break;
+                            default:
+                                break;
                         }
-                        else
-                        {
-                            try
-                            {
-                                await bot.SendChatActionAsync(update.Message.Chat.Id, ChatAction.Typing);
-
-                                var response = await CallDFAPIAsync(update.Message);
-
-                                var text = ProcessIntent(response);
-                                
-                                await bot.SendTextMessageAsync(chatId: update.Message.Chat.Id,
-                                                                text: text,
-                                                                replyMarkup: new ReplyKeyboardRemove());
-                            }
-                            catch (Exception exception)
-                            {
-                                await HandleErrorAsync(botClient, exception, cancellationToken);
-                            }
-                        }
+                    }
+                    else
+                    {
+                        await HandleNewUserAsync(update);
                     }
                 }
             }
+        }
+
+        private static async Task HandleUserInputDuringTutorialAsync(Update update, Classes.User user)
+        {
+            var intent = await CallDFAPIAsync(update.Message, "Tutorial");
+
+            if (intent is TutorialNext)
+            {
+                if (!user.Tutorial.isFinished)
+                {
+                    var message = user.Tutorial.GetNextMessage();
+                    if (message.IsLastMessage)
+                    {
+                        user.CurrentState = UserState.Idle;
+                    }
+                    await message.SendMessageAsync(bot, user.Id);
+                }
+            }
+            else if (intent is TutorialCancel)
+            {
+                user.CurrentState = UserState.Idle;
+                await SendMessageAsync(user.Id, "Abbruch Abbruch!", new ReplyKeyboardRemove());
+            }
+            else
+            {
+                await SendMessageAsync(user.Id, "Ich habe dich nicht verstanden");
+            }
+        }
+
+        private static async Task HandleNewUserAsync(Update update)
+        {
+            await SendWelcomeMessageAsync(update);
+            users.AddUser(update.Message.Chat.Id, new Classes.User(update.Message.Chat.Id) { CurrentState = UserState.WaitingForUserName });
+        }
+
+        private static async Task HandleUserInputAsync(Update update, Classes.User user, CancellationToken cancellationToken)
+        {
+            try
+            {
+                await bot.SendChatActionAsync(update.Message.Chat.Id, ChatAction.Typing);
+
+                var response = await CallDFAPIAsync(update.Message);
+
+                switch (response)
+                {
+                    case TutorialStartIntent intent:
+                        {
+                            await StartTutorialAsync(user, intent);
+                            break;
+                        }
+                    case DefaultFallbackIntent intent:
+                        {
+                            await SendMessageAsync(user.Id, intent.Process());
+                            break;
+                        }
+                    case WelcomeIntent intent:
+                        {
+                            await SendMessageAsync(user.Id, intent.Process());
+                            break;
+                        }
+                    default:
+                        break;
+                }
+            }
+            catch (Exception exception)
+            {
+                await HandleErrorAsync(bot, exception, cancellationToken);
+            }
+        }
+    
+
+        private static async Task StartTutorialAsync(Classes.User user, TutorialStartIntent intent)
+        {
+            user.CurrentState = UserState.Tutorial;
+            user.Tutorial = new Tutorial(DummyTutorial.Defaultutorial());
+            var text = "Okay, ich erkläre dir den Drucker";
+
+            ReplyKeyboardMarkup replyKeyboardMarkup = new(
+                    new KeyboardButton[] { "Erklärung abbrechen", "Weiter" },
+                    resizeKeyboard: true
+                );
+
+            await SendMessageAsync(user.Id, text, replyKeyboardMarkup);
+        }
+
+        private static async Task SendMessageAsync(Int64 chatId, string text, IReplyMarkup replyKeyboardMarkup = null)
+        {
+            await bot.SendTextMessageAsync(chatId: chatId,
+                            text: text,
+                            replyMarkup: replyKeyboardMarkup);
         }
 
         private static async Task SendNameResponseMessage(Update update, Classes.User user)
@@ -209,8 +300,10 @@ namespace PrintAssistConsole
             return Task.CompletedTask;
         }
 
-        public static async Task<DetectIntentResponse> CallDFAPIAsync(Telegram.Bot.Types.Message message)
+        public static async Task<object> CallDFAPIAsync(Telegram.Bot.Types.Message message, string contextName = null, bool clearContext = true)
         {
+            var sessionId = message.Chat.Id;
+
             var query = new QueryInput
             {
                 Text = new TextInput
@@ -219,51 +312,73 @@ namespace PrintAssistConsole
                     LanguageCode = "de"
                 }
             };
+    
+            var request = new DetectIntentRequest
+            {
+                SessionAsSessionName = new SessionName(agentId, sessionId.ToString()),
+                QueryInput = query,
+                QueryParams = new QueryParameters()
+            };
+
+            if (contextName != null)
+            {
+                var context = new Context
+                {
+                    ContextName = new ContextName(agentId, sessionId.ToString(), contextName),
+                    LifespanCount = 3,
+                };
+                request.QueryParams.Contexts.Add(context);
+            }
+            else
+            {
+                request.QueryParams.ResetContexts = clearContext;
+            }
+
 
             SessionsClient client = new SessionsClientBuilder
             {
                 CredentialsPath = dialogFlowAPIKeyFile
             }.Build();
+            
+            var response = await client.DetectIntentAsync(request);
 
-            var sessionId = message.Chat.Id;
-            var response = await client.DetectIntentAsync(
-                new SessionName(agentId, sessionId.ToString()),
-                query
-            );
-            return response;
+            var type = intentMap[response.QueryResult.Intent.DisplayName]; //key not found exception could be thrown here
+            var intent = (BaseIntent)Activator.CreateInstance(type);
+            intent.response = response;
+            return intent;
         }
 
-        private static string ProcessIntent(DetectIntentResponse response)
-        {
-            ProcessDelegate processDelegate;
-            string returnString;
-            if (intentHandlers.TryGetValue(response.QueryResult.Intent.DisplayName, out processDelegate))
-            {
-                if (processDelegate != null)
-                {
-                    try
-                    {
-                        returnString = processDelegate(response);
-                    }
-                    catch (NotImplementedException ex)
-                    {
-                        returnString = ex.Message;
-                    }
-                    catch (Exception)
-                    {
-                        returnString = "Es ist ein Fehler aufgetreten";
-                    }
-                }
-                else
-                {
-                    returnString = "Keine passende Process-Methode gefunden";
-                }
-            }
-            else
-            {
-                returnString = "Intent nicht in der Middleware gefunden";
-            }
-            return returnString;
-        }
+        //private static string ProcessIntent(DetectIntentResponse response)
+        //{
+        //    ProcessDelegate processDelegate;
+        //    string returnString;
+        //    if (intentHandlers.TryGetValue(response.QueryResult.Intent.DisplayName, out processDelegate))
+        //    {
+        //        if (processDelegate != null)
+        //        {
+        //            try
+        //            {
+        //                returnString = processDelegate(response);
+        //            }
+        //            catch (NotImplementedException ex)
+        //            {
+        //                returnString = ex.Message;
+        //            }
+        //            catch (Exception)
+        //            {
+        //                returnString = "Es ist ein Fehler aufgetreten";
+        //            }
+        //        }
+        //        else
+        //        {
+        //            returnString = "Keine passende Process-Methode gefunden";
+        //        }
+        //    }
+        //    else
+        //    {
+        //        returnString = "Intent nicht in der Middleware gefunden";
+        //    }
+        //    return returnString;
+        //}
     }
 }

@@ -9,9 +9,9 @@ using System.Threading.Tasks;
 namespace PrintAssistConsole.Intents
 {
     [IntentAttribute("TutorialStarten")]
-    public class TutorialStartIntent
+    public class TutorialStartIntent:BaseIntent
     {
-        public static string Process(DetectIntentResponse response)
+        public override string Process()
         {
             return "Okay, ich erkläre dir den Drucker.";
         }

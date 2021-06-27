@@ -9,8 +9,14 @@ using System.Threading.Tasks;
 namespace PrintAssistConsole.Intents
 {
     [IntentAttribute("Default Welcome Intent")]
-    public class WelcomeIntent
+    public class WelcomeIntent:BaseIntent
     {
-        public static string Process(DetectIntentResponse response) { throw new NotImplementedException(); }
+        private List<string> messages = new List<string> { "Hallo!", "Guten Tag!", "Ich grüße dich!" };
+        public override string Process() 
+        {
+            var uptime = DateTime.UtcNow - System.Diagnostics.Process.GetCurrentProcess().StartTime.ToUniversalTime();
+            Random rnd = new Random((Int32)(DateTime.Now.Ticks % Int32.MaxValue));
+            return messages[rnd.Next(messages.Count)];
+        }
     }
 }
