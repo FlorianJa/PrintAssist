@@ -12,6 +12,7 @@ using PrintAssistConsole.Intents;
 using PrintAssistConsole.Utilies;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -22,6 +23,7 @@ using Telegram.Bot.Exceptions;
 using Telegram.Bot.Extensions.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
+using Telegram.Bot.Types.InputFiles;
 using Telegram.Bot.Types.ReplyMarkups;
 
 namespace PrintAssistConsole
@@ -190,7 +192,8 @@ namespace PrintAssistConsole
                     {
                         user.CurrentState = UserState.Idle;
                     }
-                    await message.SendMessageAsync(bot, user.Id);
+                    //await message.SendAsync(bot, user.Id);
+                    await SendTutorialMessageAsync(user.Id, message);
                 }
             }
             else if (intent is TutorialCancel)
@@ -250,16 +253,37 @@ namespace PrintAssistConsole
         {
             user.CurrentState = UserState.Tutorial;
             user.Tutorial = new Tutorial(DummyTutorial.Defaultutorial());
-            var text = "Okay, ich erkläre dir den Drucker";
-
-            ReplyKeyboardMarkup replyKeyboardMarkup = new(
-                    new KeyboardButton[] { "Erklärung abbrechen", "Weiter" },
-                    resizeKeyboard: true
-                );
-
-            await SendMessageAsync(user.Id, text, replyKeyboardMarkup);
+            var message = user.Tutorial.GetNextMessage();
+            //await message.SendAsync(bot, user.Id);
+            await SendTutorialMessageAsync(user.Id, message);
         }
 
+        private static async Task SendTutorialMessageAsync(Int64 id, TutorialMessage message)
+        {
+            if (message.PhotoFilePath != null && System.IO.File.Exists(message.PhotoFilePath))
+            {
+                await bot.SendChatActionAsync(id, ChatAction.UploadPhoto);
+                using FileStream fileStream = new(message.PhotoFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                var fileName = message.PhotoFilePath.Split(Path.DirectorySeparatorChar).Last();
+                await bot.SendPhotoAsync(chatId: id, photo: new InputOnlineFile(fileStream, fileName));
+            }
+
+            if (message.VideoFilePath != null && System.IO.File.Exists(message.VideoFilePath))
+            {
+                await bot.SendChatActionAsync(id, ChatAction.UploadVideo);
+                using FileStream fileStream = new(message.VideoFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                var fileName = message.VideoFilePath.Split(Path.DirectorySeparatorChar).Last();
+                await bot.SendVideoAsync(chatId: id, video: new InputOnlineFile(fileStream, fileName));
+            }
+
+            if (message.Text != null)
+            {
+                await bot.SendChatActionAsync(id, ChatAction.Typing);
+                await bot.SendTextMessageAsync(chatId: id,
+                            text: message.Text,
+                            replyMarkup: message.replyKeyboardMarkup);
+            }
+        }
         private static async Task SendMessageAsync(Int64 chatId, string text, IReplyMarkup replyKeyboardMarkup = null)
         {
             await bot.SendTextMessageAsync(chatId: chatId,
@@ -333,7 +357,6 @@ namespace PrintAssistConsole
             {
                 request.QueryParams.ResetContexts = clearContext;
             }
-
 
             SessionsClient client = new SessionsClientBuilder
             {

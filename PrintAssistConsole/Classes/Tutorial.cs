@@ -68,36 +68,36 @@ namespace PrintAssistConsole.Classes
             }
         }
 
-        public async Task SendMessageAsync(ITelegramBotClient botClient, Int64 id)
-        {
-            if (PhotoFilePath != null && File.Exists(PhotoFilePath))
-            {
-                await botClient.SendChatActionAsync(id, ChatAction.UploadPhoto);
-                using FileStream fileStream = new(PhotoFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-                var fileName = PhotoFilePath.Split(Path.DirectorySeparatorChar).Last();
-                await botClient.SendPhotoAsync(chatId: id,
-                                               photo: new InputOnlineFile(fileStream, fileName));
+        //public async Task SendAsync(ITelegramBotClient botClient, Int64 id)
+        //{
+        //    if (PhotoFilePath != null && File.Exists(PhotoFilePath))
+        //    {
+        //        await botClient.SendChatActionAsync(id, ChatAction.UploadPhoto);
+        //        using FileStream fileStream = new(PhotoFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        //        var fileName = PhotoFilePath.Split(Path.DirectorySeparatorChar).Last();
+        //        await botClient.SendPhotoAsync(chatId: id,
+        //                                       photo: new InputOnlineFile(fileStream, fileName));
 
-            }
-            //if (PhotoFilePath != null && File.Exists(PhotoFilePath))
-            //{
-            //    await botClient.SendChatActionAsync(id, ChatAction.UploadPhoto);
-            //    using FileStream fileStream = new(PhotoFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-            //    var fileName = PhotoFilePath.Split(Path.DirectorySeparatorChar).Last();
-            //    await botClient.SendPhotoAsync(chatId: id,
-            //                                   photo: new InputOnlineFile(fileStream, fileName));
+        //    }
+        //    //if (PhotoFilePath != null && File.Exists(PhotoFilePath))
+        //    //{
+        //    //    await botClient.SendChatActionAsync(id, ChatAction.UploadPhoto);
+        //    //    using FileStream fileStream = new(PhotoFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        //    //    var fileName = PhotoFilePath.Split(Path.DirectorySeparatorChar).Last();
+        //    //    await botClient.SendPhotoAsync(chatId: id,
+        //    //                                   photo: new InputOnlineFile(fileStream, fileName));
 
-            //}
-            if (Text != null)
-            {
-                await botClient.SendChatActionAsync(id, ChatAction.Typing);
-                await botClient.SendTextMessageAsync(chatId: id,
-                            text: Text,
-                            replyMarkup: replyKeyboardMarkup);
+        //    //}
+        //    if (Text != null)
+        //    {
+        //        await botClient.SendChatActionAsync(id, ChatAction.Typing);
+        //        await botClient.SendTextMessageAsync(chatId: id,
+        //                    text: Text,
+        //                    replyMarkup: replyKeyboardMarkup);
 
-            }
+        //    }
 
-        }
+        //}
     }
 
 
@@ -108,6 +108,7 @@ namespace PrintAssistConsole.Classes
         public static DummyTutorial Defaultutorial()
         {
             var tutorial = new DummyTutorial();
+            tutorial.messages.Add(new TutorialMessage(text: "Start"));
             tutorial.messages.Add(new TutorialMessage(text: "Schritt 1"));
             tutorial.messages.Add(new TutorialMessage(text: "Schritt 2"));
             tutorial.messages.Add(new TutorialMessage(text: "Schritt 3"));
