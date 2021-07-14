@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -43,11 +44,28 @@ namespace PrintAssistConsole.Classes
 
     public class TutorialMessage
     {
-        public readonly string Text;
-        public readonly string PhotoFilePath;
-        public readonly string VideoFilePath;
-        public readonly IReplyMarkup replyKeyboardMarkup;
-        public readonly bool IsLastMessage;
+        public string Text { get; set; }
+        public string PhotoFilePath { get; set; }
+        public string VideoFilePath { get; set; }
+        public IReplyMarkup ReplyKeyboardMarkup
+        {
+            get
+            {
+                if (IsLastMessage == true)
+                {
+                    return new ReplyKeyboardRemove();
+                }
+                else
+                {
+                    return new ReplyKeyboardMarkup(
+                            new KeyboardButton[] { "Erklärung abbrechen", "👍" },
+                            resizeKeyboard: true
+                        );
+                }
+            }
+        }
+
+        public bool IsLastMessage { get; set; }
 
         public TutorialMessage(string text = null, string photoFilePath = null, string videoFilePath = null, bool isLastMessage = false)
         {
@@ -55,19 +73,12 @@ namespace PrintAssistConsole.Classes
             PhotoFilePath = photoFilePath;
             VideoFilePath = videoFilePath;
             this.IsLastMessage = isLastMessage;
-            if (isLastMessage == true)
-            {
-                replyKeyboardMarkup = new ReplyKeyboardRemove();
-            }
-            else
-            {
-                replyKeyboardMarkup = new ReplyKeyboardMarkup(
-                        new KeyboardButton[] { "Erklärung abbrechen", "👍" },
-                        resizeKeyboard: true
-                    );
-            }
         }
 
+        public TutorialMessage()
+        {
+
+        }
         //public async Task SendAsync(ITelegramBotClient botClient, Int64 id)
         //{
         //    if (PhotoFilePath != null && File.Exists(PhotoFilePath))
@@ -119,6 +130,35 @@ namespace PrintAssistConsole.Classes
             tutorial.messages.Add(new TutorialMessage(text: "Ende", isLastMessage: true));
             return tutorial;
         }
+        public TutorialMessage GetMessageByStepnumber(int stepnumber)
+        {
+            return messages[stepnumber];
+        }
+
+        public int GetMessageCount()
+        {
+            return messages.Count;
+        }
+    }
+
+    public class JsonTutorial : ITutorialDataProvider
+    {
+        public List<TutorialMessage> messages { get; set; }
+
+        public static JsonTutorial Defaultutorial()
+        {
+            JsonTutorial tutorial;
+            // deserialize JSON directly from a file
+            using (StreamReader file = File.OpenText(@".\BotContent\HardwareTutorial.json"))
+            {
+                JsonSerializer serializer = new JsonSerializer();
+                 tutorial = (JsonTutorial)serializer.Deserialize(file, typeof(JsonTutorial));
+            }
+
+            //var tutorial = JsonConvert.DeserializeObject<JsonTutorial>(File.ReadAllText(@"BotContent\HardwareTutorial.json"));
+            return tutorial;
+        }
+
         public TutorialMessage GetMessageByStepnumber(int stepnumber)
         {
             return messages[stepnumber];

@@ -252,7 +252,7 @@ namespace PrintAssistConsole
         private static async Task StartTutorialAsync(Classes.User user, TutorialStartIntent intent)
         {
             user.CurrentState = UserState.Tutorial;
-            user.Tutorial = new Tutorial(DummyTutorial.Defaultutorial());
+            user.Tutorial = new Tutorial(JsonTutorial.Defaultutorial());
             var message = user.Tutorial.GetNextMessage();
             //await message.SendAsync(bot, user.Id);
             await SendTutorialMessageAsync(user.Id, message);
@@ -281,7 +281,7 @@ namespace PrintAssistConsole
                 await bot.SendChatActionAsync(id, ChatAction.Typing);
                 await bot.SendTextMessageAsync(chatId: id,
                             text: message.Text,
-                            replyMarkup: message.replyKeyboardMarkup);
+                            replyMarkup: message.ReplyKeyboardMarkup);
             }
         }
         private static async Task SendMessageAsync(Int64 chatId, string text, IReplyMarkup replyKeyboardMarkup = null)

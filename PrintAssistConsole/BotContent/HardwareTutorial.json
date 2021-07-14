@@ -1,0 +1,52 @@
+{
+  "messages": [
+	{
+	"text": "Okay, I will give you a brief overview of the printer.",
+	"photoFilePath": null,
+	"videoFilePath": null,
+	"isLastMessage": false
+	},
+	{
+	"text": "The printer is an additive manufacturing device. This means that an object is created by adding material to the object, layer by layer.",
+	"photoFilePath": null,
+	"videoFilePath": null,
+	"isLastMessage": false
+	}
+	,
+	{
+	"text": "The material for this printer is a plastic which comes as a long string on a spool. The material is also called filament. When it's heated, it gets viscous and the printer can process it. When the material cools down, it gets solid again, like in a hot glue gun.",
+	"photoFilePath": null,
+	"videoFilePath": null,
+	"isLastMessage": false
+	}
+	,
+	{
+	"text": "The filament is heated up to around 200°C in the hotend which is in the printhead. The viscous material is pressed out on the bottom side of the hotend through the nozzle. The nozzle is very hot during the print and should not be touched!",
+	"photoFilePath": null,
+	"videoFilePath": null,
+	"isLastMessage": false
+	}
+	,
+	{
+	"text": "Pushing the filament through the hotend is also called extruding. By moving the printhead and simultaneously extruding material, the object is slowly created layer by layer.",
+	"photoFilePath": null,
+	"videoFilePath": null,
+	"isLastMessage": false
+	}
+	,
+	{
+	"text": "For better adhesion, the buildplate can be heated up to around 70°C. The buildplate should not be touched during printing because of the high temperature and the risk of crushing due to the movement of the buildplate.",
+	"photoFilePath": null,
+	"videoFilePath": null,
+	"isLastMessage": false
+	}
+	,
+	{
+	"text": "This was short overview of the printer and its' components. Do you like to know about the 3D printing workflow?",
+	"photoFilePath": null,
+	"videoFilePath": null,
+	"isLastMessage": true
+	}
+  ]
+  
+}
