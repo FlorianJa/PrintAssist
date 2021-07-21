@@ -10,6 +10,7 @@ namespace PrintAssistConsole
         Unknown = 4,
         HardwareTutorial = 8,
         WaitingForConfimationToStartWorkflowTutorial = 16,
-        WorkflowTutorial = 32
+        WorkflowTutorial = 32,
+        ReceivedStlFile = 64
     }
 }

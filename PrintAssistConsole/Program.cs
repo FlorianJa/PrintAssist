@@ -145,9 +145,31 @@ namespace PrintAssistConsole
 
         public static async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
+            var user = users.GetUserById(update.Message.Chat.Id);
+
             if (update.Type == UpdateType.Message)
             {
-                if (update.Message.EntityValues != null) //message is a command
+                if(update.Message.Document != null)
+                {
+                    using FileStream fileStream = new FileStream(update.Message.Document.FileName, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Write);
+                    
+                    var tmp = await bot.GetInfoAndDownloadFileAsync(update.Message.Document.FileId, fileStream);
+
+                    if(Path.GetExtension(update.Message.Document.FileName) == ".stl")
+                    {
+
+                        await HandleStlInputAsync(update, user);
+                    }
+                    else if(Path.GetExtension(update.Message.Document.FileName) == ".gcode")
+                    {
+                        await SendMessageAsync(update.Message.Chat.Id, "got gcode");
+                    }
+                    else
+                    {
+                        await SendMessageAsync(update.Message.Chat.Id, "other file");
+                    }
+                }
+                else if (update.Message.EntityValues != null) //message is a command
                 {
                     if (update.Message.EntityValues.FirstOrDefault().Equals("/start"))
                     {
@@ -156,7 +178,7 @@ namespace PrintAssistConsole
                 }
                 else
                 {
-                    var user = users.GetUserById(update.Message.Chat.Id);
+                    
 
                     if (user != null)
                     {
@@ -177,6 +199,9 @@ namespace PrintAssistConsole
                             case UserState.WaitingForConfimationToStartWorkflowTutorial | UserState.Idle:
                                 await HandleUserInputAfterHardwareTutorialAsync(update, user);
                                 break;
+                            case UserState.ReceivedStlFile:
+                                
+                                break;
                             default:
                                 break;
                         }
@@ -187,6 +212,19 @@ namespace PrintAssistConsole
                     }
                 }
             }
+        }
+
+        private static async Task HandleStlInputAsync(Update update, Classes.User user)
+        {
+            user.CurrentState = UserState.ReceivedStlFile;
+            var keyboard =  new ReplyKeyboardMarkup(
+                            new KeyboardButton[] { "Nein", "Ja" },
+                            resizeKeyboard: true
+                        );
+            await SendMessageAsync(update.Message.Chat.Id, "I got your model. Should I slice it for you?", keyboard);
+
+
+
         }
 
         private static async Task HandleUserInputAfterHardwareTutorialAsync(Update update, Classes.User user)
