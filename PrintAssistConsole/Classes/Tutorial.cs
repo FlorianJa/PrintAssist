@@ -58,7 +58,7 @@ namespace PrintAssistConsole.Classes
                 else
                 {
                     return new ReplyKeyboardMarkup(
-                            new KeyboardButton[] { "Erklärung abbrechen", "👍" },
+                            new KeyboardButton[] { "Erklärung abbrechen", "Weiter" },
                             resizeKeyboard: true
                         );
                 }

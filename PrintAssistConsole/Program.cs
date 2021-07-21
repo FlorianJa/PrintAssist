@@ -40,6 +40,7 @@ namespace PrintAssistConsole
         private static IConfiguration configuration;
         private static string agentId;
         private static string dialogFlowAPIKeyFile;
+        private static string botToken;
 
         public static async Task Main()
         {
@@ -48,12 +49,13 @@ namespace PrintAssistConsole
             .Build();
             agentId = configuration.GetValue<string>("AgentId");
             dialogFlowAPIKeyFile = configuration.GetValue<string>("DialogFlowAPIFile");
+            botToken = configuration.GetValue<string>("BotToken");
 
             users = new RamUserRepo();
 
             SetupIntentMapping(agentId);
 
-            bot = new TelegramBotClient(TelegramBotConfiguration.BotToken);
+            bot = new TelegramBotClient(botToken);
             var me = await bot.GetMeAsync();
             bot.StartReceiving(new DefaultUpdateHandler(HandleUpdateAsync, HandleErrorAsync), cts.Token);
 
@@ -68,6 +70,7 @@ namespace PrintAssistConsole
             }
         }
 
+        #region setup
         private static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
         {
             // Send cancellation request to stop bot
@@ -136,6 +139,9 @@ namespace PrintAssistConsole
             //ToDo: check if there are more than 100 intents
             return intents.ReadPage(100);
         }
+
+        #endregion
+
 
         public static async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
