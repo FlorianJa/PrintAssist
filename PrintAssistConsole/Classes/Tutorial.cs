@@ -44,14 +44,35 @@ namespace PrintAssistConsole.Classes
 
     public class TutorialMessage
     {
+
         public string Text { get; set; }
-        public string PhotoFilePath { get; set; }
-        public string VideoFilePath { get; set; }
+        public List<string> PhotoFilePaths { get; set; }
+        public List<string> VideoFilePaths { get; set; }
+        public List<string> KeyboardButtons { get; set; }
+
         public IReplyMarkup ReplyKeyboardMarkup
         {
             get
             {
-                if (IsLastMessage == true)
+                if(KeyboardButtons != null && KeyboardButtons.Count > 0)
+                {
+                    var keyboard = new ReplyKeyboardMarkup();
+
+                    var buttons = new List<KeyboardButton>();
+
+                    foreach (var name in KeyboardButtons)
+                    {
+                        buttons.Add(new KeyboardButton(name));
+                    }
+
+                    keyboard.Keyboard = new List<List<KeyboardButton>> { buttons };
+                    keyboard.ResizeKeyboard = true;
+                    return keyboard;
+                        //    new KeyboardButton[] { KeyboardButtons.ToArray() },
+                        //    resizeKeyboard: true
+                        //);
+                }
+                else if (IsLastMessage == true)
                 {
                     return new ReplyKeyboardRemove();
                 }
@@ -67,11 +88,11 @@ namespace PrintAssistConsole.Classes
 
         public bool IsLastMessage { get; set; }
 
-        public TutorialMessage(string text = null, string photoFilePath = null, string videoFilePath = null, bool isLastMessage = false)
+        public TutorialMessage(string text = null, List<string> photoFilePath = null, List<string> videoFilePath = null, bool isLastMessage = false)
         {
             Text = text;
-            PhotoFilePath = photoFilePath;
-            VideoFilePath = videoFilePath;
+            PhotoFilePaths = photoFilePath;
+            VideoFilePaths = videoFilePath;
             this.IsLastMessage = isLastMessage;
         }
 
@@ -145,7 +166,7 @@ namespace PrintAssistConsole.Classes
     {
         public List<TutorialMessage> messages { get; set; }
 
-        public static JsonTutorial Defaultutorial()
+        public static JsonTutorial DefaulHardwareTutorial()
         {
             JsonTutorial tutorial;
             // deserialize JSON directly from a file
@@ -153,6 +174,20 @@ namespace PrintAssistConsole.Classes
             {
                 JsonSerializer serializer = new JsonSerializer();
                  tutorial = (JsonTutorial)serializer.Deserialize(file, typeof(JsonTutorial));
+            }
+
+            //var tutorial = JsonConvert.DeserializeObject<JsonTutorial>(File.ReadAllText(@"BotContent\HardwareTutorial.json"));
+            return tutorial;
+        }
+
+        public static JsonTutorial DefaulWorkflowTutorial()
+        {
+            JsonTutorial tutorial;
+            // deserialize JSON directly from a file
+            using (StreamReader file = File.OpenText(@".\BotContent\WorkflowTutorial.json"))
+            {
+                JsonSerializer serializer = new JsonSerializer();
+                tutorial = (JsonTutorial)serializer.Deserialize(file, typeof(JsonTutorial));
             }
 
             //var tutorial = JsonConvert.DeserializeObject<JsonTutorial>(File.ReadAllText(@"BotContent\HardwareTutorial.json"));
@@ -169,4 +204,6 @@ namespace PrintAssistConsole.Classes
             return messages.Count;
         }
     }
+
+
 }

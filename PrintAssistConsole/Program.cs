@@ -162,16 +162,20 @@ namespace PrintAssistConsole
                     {
                         switch (user.CurrentState)
                         {
-                            case UserState.Idle:
-                                await HandleUserInputAsync(update, user, cancellationToken);
-                                break;
                             case UserState.WaitingForUserName:
                                 await SendNameResponseMessage(update, user);
                                 break;
                             case UserState.Unknown:
                                 break;
-                            case UserState.Tutorial:
+                            case UserState.WorkflowTutorial:
+                            case UserState.HardwareTutorial:
                                 await HandleUserInputDuringTutorialAsync(update, user);
+                                break;
+                            case UserState.Idle:
+                                await HandleUserInputAsync(update, user, cancellationToken);
+                                break;
+                            case UserState.WaitingForConfimationToStartWorkflowTutorial | UserState.Idle:
+                                await HandleUserInputAfterHardwareTutorialAsync(update, user);
                                 break;
                             default:
                                 break;
@@ -185,9 +189,36 @@ namespace PrintAssistConsole
             }
         }
 
+        private static async Task HandleUserInputAfterHardwareTutorialAsync(Update update, Classes.User user)
+        {
+            var response = await CallDFAPIAsync(update.Message, "TutorialStarten-followup");
+
+            switch (response)
+            {
+                case TutorialYes intent:
+                    await StartWorkflowTutorialAsync(user);
+                    break;
+                case TutorialNo intent:
+                    user.CurrentState = UserState.Idle;
+                    await SendMessageAsync(user.Id, "Ok. Was kann ich sonst für dich tun?", new ReplyKeyboardRemove());
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        private static async Task StartWorkflowTutorialAsync(Classes.User user)
+        {
+            user.CurrentState = UserState.WorkflowTutorial;
+            user.Tutorial = new Tutorial(JsonTutorial.DefaulWorkflowTutorial());
+            var message = user.Tutorial.GetNextMessage();
+            //await message.SendAsync(bot, user.Id);
+            await SendTutorialMessageAsync(user.Id, message);
+        }
+
         private static async Task HandleUserInputDuringTutorialAsync(Update update, Classes.User user)
         {
-            var intent = await CallDFAPIAsync(update.Message, "Tutorial");
+            var intent = await CallDFAPIAsync(update.Message, "TutorialStarten-followup");
 
             if (intent is TutorialNext)
             {
@@ -196,7 +227,14 @@ namespace PrintAssistConsole
                     var message = user.Tutorial.GetNextMessage();
                     if (message.IsLastMessage)
                     {
-                        user.CurrentState = UserState.Idle;
+                        if (user.CurrentState == UserState.HardwareTutorial)
+                        {
+                            user.CurrentState = UserState.Idle | UserState.WaitingForConfimationToStartWorkflowTutorial;
+                        }
+                        else
+                        {
+                            user.CurrentState = UserState.Idle;
+                        }
                     }
                     //await message.SendAsync(bot, user.Id);
                     await SendTutorialMessageAsync(user.Id, message);
@@ -231,7 +269,7 @@ namespace PrintAssistConsole
                 {
                     case TutorialStartIntent intent:
                         {
-                            await StartTutorialAsync(user, intent);
+                            await StartHardwareTutorialAsync(user, intent);
                             break;
                         }
                     case DefaultFallbackIntent intent:
@@ -255,10 +293,10 @@ namespace PrintAssistConsole
         }
     
 
-        private static async Task StartTutorialAsync(Classes.User user, TutorialStartIntent intent)
+        private static async Task StartHardwareTutorialAsync(Classes.User user, TutorialStartIntent intent)
         {
-            user.CurrentState = UserState.Tutorial;
-            user.Tutorial = new Tutorial(JsonTutorial.Defaultutorial());
+            user.CurrentState = UserState.HardwareTutorial;
+            user.Tutorial = new Tutorial(JsonTutorial.DefaulHardwareTutorial());
             var message = user.Tutorial.GetNextMessage();
             //await message.SendAsync(bot, user.Id);
             await SendTutorialMessageAsync(user.Id, message);
@@ -266,20 +304,79 @@ namespace PrintAssistConsole
 
         private static async Task SendTutorialMessageAsync(Int64 id, TutorialMessage message)
         {
-            if (message.PhotoFilePath != null && System.IO.File.Exists(message.PhotoFilePath))
+            if (message.PhotoFilePaths != null)
             {
-                await bot.SendChatActionAsync(id, ChatAction.UploadPhoto);
-                using FileStream fileStream = new(message.PhotoFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-                var fileName = message.PhotoFilePath.Split(Path.DirectorySeparatorChar).Last();
-                await bot.SendPhotoAsync(chatId: id, photo: new InputOnlineFile(fileStream, fileName));
-            }
+                if (message.PhotoFilePaths.Count == 1)
+                {
+                    if (System.IO.File.Exists(message.PhotoFilePaths[0]))
+                    {
+                        await bot.SendChatActionAsync(id, ChatAction.UploadPhoto);
+                        using FileStream fileStream = new(message.PhotoFilePaths[0], FileMode.Open, FileAccess.Read, FileShare.Read);
+                        var fileName = message.PhotoFilePaths[0].Split(Path.DirectorySeparatorChar).Last();
+                        await bot.SendPhotoAsync(chatId: id, photo: new InputOnlineFile(fileStream, fileName));
+                    }
+                }
+                else if(message.PhotoFilePaths.Count > 1)
+                {
+                    await bot.SendChatActionAsync(id, ChatAction.UploadPhoto);
 
-            if (message.VideoFilePath != null && System.IO.File.Exists(message.VideoFilePath))
+                    var album = new List<IAlbumInputMedia>();
+                    var tmp = new List<FileStream>();
+                    foreach (var path in message.PhotoFilePaths)
+                    {
+                        if (System.IO.File.Exists(path))
+                        {
+
+                            FileStream fileStream = new(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+                            tmp.Add(fileStream);
+                            var fileName = path.Split(Path.DirectorySeparatorChar).Last();
+
+                            album.Add(new InputMediaPhoto(new InputMedia(fileStream, fileName)));
+                        }
+                    }
+
+                    await bot.SendMediaGroupAsync(chatId: id, inputMedia: album);
+
+                    foreach (var stream in tmp)
+                    {
+                        stream.Dispose();
+                    }
+                    tmp.Clear();
+                }
+            
+
+            }
+            if (message.VideoFilePaths != null)
             {
-                await bot.SendChatActionAsync(id, ChatAction.UploadVideo);
-                using FileStream fileStream = new(message.VideoFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-                var fileName = message.VideoFilePath.Split(Path.DirectorySeparatorChar).Last();
-                await bot.SendVideoAsync(chatId: id, video: new InputOnlineFile(fileStream, fileName));
+                if (message.VideoFilePaths.Count == 1)
+                {
+
+                    if (System.IO.File.Exists(message.VideoFilePaths[0]))
+                    {
+                        await bot.SendChatActionAsync(id, ChatAction.UploadVideo);
+                        using FileStream fileStream = new(message.VideoFilePaths[0], FileMode.Open, FileAccess.Read, FileShare.Read);
+                        var fileName = message.VideoFilePaths[0].Split(Path.DirectorySeparatorChar).Last();
+                        await bot.SendVideoAsync(chatId: id, video: new InputOnlineFile(fileStream, fileName));
+                    }
+                }
+                else if (message.VideoFilePaths.Count > 1)
+                {
+                    await bot.SendChatActionAsync(id, ChatAction.UploadVideo);
+
+                    var album = new List<IAlbumInputMedia>();
+                    foreach (var path in message.VideoFilePaths)
+                    {
+                        if (System.IO.File.Exists(path))
+                        {
+                            using FileStream fileStream = new(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+                            var fileName = path.Split(Path.DirectorySeparatorChar).Last();
+
+                            album.Add(new InputMediaPhoto(new InputMedia(fileStream, fileName)));
+                        }
+                    }
+
+                    await bot.SendMediaGroupAsync(chatId: id, inputMedia: album);
+                }
             }
 
             if (message.Text != null)
@@ -290,6 +387,7 @@ namespace PrintAssistConsole
                             replyMarkup: message.ReplyKeyboardMarkup);
             }
         }
+
         private static async Task SendMessageAsync(Int64 chatId, string text, IReplyMarkup replyKeyboardMarkup = null)
         {
             await bot.SendTextMessageAsync(chatId: chatId,

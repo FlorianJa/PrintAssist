@@ -26,4 +26,24 @@ namespace PrintAssistConsole.Intents
             throw new NotImplementedException();
         }
     }
+
+    [IntentAttribute("Tutorial.Yes")]
+    public class TutorialYes : BaseIntent
+    {
+        public override string Process()
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    [IntentAttribute("Tutorial.No")]
+    public class TutorialNo : BaseIntent
+    {
+        public override string Process()
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+
 }

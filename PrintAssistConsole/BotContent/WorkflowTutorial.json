@@ -1,0 +1,72 @@
+{
+	"messages": [
+		{
+			"text": "Okay, let's take a look at what you need to do before you can start printing.",
+			"photoFilePaths": null,
+			"videoFilePaths": null,
+			"isLastMessage": false
+		},
+		{
+			"text": "First, you need a 3D model of the object you want to print. You can create your own model or you can download a model from the internet. I can also search for 3D models on the web for you.",
+			"photoFilePaths": null,
+			"videoFilePaths": null,
+			"isLastMessage": false
+		},
+		{
+			"text": "Next, you need to convert the model into machine code thus the printer knows what to do. This process is called slicing. The model is cut into thin layers and the movement of the printer is calculated.",
+			"photoFilePaths": null,
+			"videoFilePaths": null,
+			"isLastMessage": false
+		},
+		{
+			"text": "You can set a lot of different parameters in the slicing process which effect the quality, stability and the print duration of the object.",
+			"photoFilePaths": null,
+			"videoFilePaths": null,
+			"isLastMessage": false
+		},
+		{
+			"text": "The quality of the surface is mainly influenced by the layer height. The thinner the layer, the smoother the surface. This printer can print between 0.07 mm and 0.3 mm layer height.",
+			"photoFilePaths": [ ".\\BotContent\\images\\LayerHeights.png", ".\\BotContent\\images\\0.05mmLayer.png", ".\\BotContent\\images\\0.2mmLayer.png", ".\\BotContent\\images\\0.3mmLayer.png" ],
+			"videoFilePaths": null,
+			"isLastMessage": false
+		},
+		{
+			"text": "To save material and lower the printing time, 3D printed objects are often not solid but have so called infill. You can select different patterns and fill rate. A higher fill rate increases the stability.",
+			"photoFilePaths": [ ".\\BotContent\\images\\InfillPattern.png", ".\\BotContent\\images\\InfillPercentage.png" ],
+			"videoFilePaths": null,
+			"isLastMessage": false
+		},
+		{
+			"text": "Since we cannot print into air, we need to add so called support structures to objects with overhangs. Support structures is additional material wich needs to be removed after the print.",
+			"photoFilePaths": [ ".\\BotContent\\images\\Overhangs.jpg" ],
+			"videoFilePaths": null,
+			"isLastMessage": false
+		},
+		{
+			"text": "You can do the slicing with a slicing software on your PC or you can send me your model and I will slice it for you.",
+			"photoFilePaths": null,
+			"videoFilePaths": null,
+			"isLastMessage": false
+		},
+		{
+			"text": "After the slicing process, the resulting machine code (gcode) file needs to be uploaded to the printer. If you sliced your model on your own, you can send the file to me and I upload it for you. Afterwards, I can start the print for you.",
+			"photoFilePaths": null,
+			"videoFilePaths": null,
+			"isLastMessage": false
+		},
+		{
+			"text": "Depending on the object size and the slicing parameter the print can take several hours.",
+			"photoFilePaths": null,
+			"videoFilePaths": null,
+			"isLastMessage": false
+		},
+		{
+			"text": "This was a short overview of the 3D printing workflow. What can i do for you next?",
+			"photoFilePaths": null,
+			"videoFilePaths": null,
+			"isLastMessage": true
+		}
+		
+	]
+  
+}
