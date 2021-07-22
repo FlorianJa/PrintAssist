@@ -25,6 +25,8 @@ namespace PrintAssistConsole
             this.tutorialData = tutorialData;
         }
 
+        public abstract Task StartAsync();
+
         public abstract Task<bool> NextAsync();
 
         public abstract Task CancelAsync();

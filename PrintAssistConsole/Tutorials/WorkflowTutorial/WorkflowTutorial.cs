@@ -31,7 +31,9 @@ namespace PrintAssistConsole
 
     public class WorkflowTutorial: Tutorial
     {
-        private enum Trigger { Next, Cancel }
+        private enum Trigger { Next, Cancel,
+            Start
+        }
         
         private readonly StateMachine<WorkflowTutorialState, Trigger> machine;
 
@@ -43,7 +45,7 @@ namespace PrintAssistConsole
             #region setup statemachine
             // Configure the before start state
             machine.Configure(WorkflowTutorialState.BeforeStart)
-                .Permit(Trigger.Next, WorkflowTutorialState.Start);
+                .Permit(Trigger.Start, WorkflowTutorialState.Start);
 
             // Configure the start state
             machine.Configure(WorkflowTutorialState.Start)
@@ -136,6 +138,11 @@ namespace PrintAssistConsole
             var message = tutorialData.GetMessage((int)state);
             await SendTutorialMessageAsync(chatId, message);
 
+        }
+
+        public override async Task StartAsync()
+        {
+            await machine.FireAsync(Trigger.Start);
         }
     }
 }

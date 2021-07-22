@@ -26,7 +26,7 @@ namespace PrintAssistConsole
 
     public class HardwareTutorial:Tutorial
     {
-        private enum Trigger { Next, Cancel }
+        private enum Trigger { Start, Next, Cancel }
 
        
         private readonly StateMachine<HardwareTutorialState, Trigger> machine;
@@ -34,13 +34,13 @@ namespace PrintAssistConsole
 
         public HardwareTutorial(long chatId, ITelegramBotClient bot, ITutorialDataProvider tutorialData) : base(chatId, bot, tutorialData)
         {
-            // Instantiate a new state machine in the Start state
+            // Instantiate a new state machine in the BeforeStart state
             machine = new StateMachine<HardwareTutorialState, Trigger>(HardwareTutorialState.BeforeStart);
 
             #region setup statemachine
             // Configure the before start state
             machine.Configure(HardwareTutorialState.BeforeStart)
-                .Permit(Trigger.Next, HardwareTutorialState.Start);
+                .Permit(Trigger.Start, HardwareTutorialState.Start);
 
             // Configure the start state
             machine.Configure(HardwareTutorialState.Start)
@@ -89,10 +89,15 @@ namespace PrintAssistConsole
                 .OnEntryAsync(async () => await SendMessageAsync(machine.State));
 
             // Configure the Cancel state
-            machine.Configure(HardwareTutorialState.Cancel)
-                .OnEntryAsync(async () => await SendMessageAsync(machine.State));
+            machine.Configure(HardwareTutorialState.Cancel);
+                //.OnEntryAsync(async () => await SendMessageAsync(machine.State));
             #endregion
 
+        }
+
+        public override async Task StartAsync()
+        {
+            await machine.FireAsync(Trigger.Start);
         }
 
         public override async Task<bool> NextAsync()

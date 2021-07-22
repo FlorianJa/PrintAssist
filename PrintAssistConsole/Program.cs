@@ -7,7 +7,6 @@ using Google.Protobuf.WellKnownTypes;
 using Grpc.Auth;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.Json;
-using PrintAssistConsole.Classes;
 using PrintAssistConsole.Intents;
 using PrintAssistConsole.Utilies;
 using System;
@@ -34,8 +33,7 @@ namespace PrintAssistConsole
     {
         private static TelegramBotClient bot;
         private static Dictionary<string, ProcessDelegate> intentHandlers;
-        private static Dictionary<string, System.Type> intentMap;
-        private static IUserRepo users;
+        private static IConversationRepo conversations;
         private static CancellationTokenSource cts = new CancellationTokenSource();
         private static IConfiguration configuration;
         private static string agentId;
@@ -51,9 +49,10 @@ namespace PrintAssistConsole
             dialogFlowAPIKeyFile = configuration.GetValue<string>("DialogFlowAPIFile");
             botToken = configuration.GetValue<string>("BotToken");
 
-            users = new RamUserRepo();
+            conversations = new RamConversationRepo();
 
-            SetupIntentMapping(agentId);
+            await IntentDetector.CreateAsync(agentId, dialogFlowAPIKeyFile);
+
 
             bot = new TelegramBotClient(botToken);
             var me = await bot.GetMeAsync();
@@ -70,7 +69,6 @@ namespace PrintAssistConsole
             }
         }
 
-        #region setup
         private static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
         {
             // Send cancellation request to stop bot
@@ -78,300 +76,254 @@ namespace PrintAssistConsole
             System.Environment.Exit(0);
         }
 
-        private static void SetupIntentMapping(string agentId)
-        {
-            intentHandlers = new Dictionary<string, ProcessDelegate>();
-            intentMap = new Dictionary<string, System.Type>();
-            //Get all types with custom attribute IntentAttribute in assembly
-            var intentClasses =
-            from a in AppDomain.CurrentDomain.GetAssemblies()
-            from t in a.GetTypes()
-            let attributes = t.GetCustomAttributes(typeof(IntentAttribute), true)
-            where attributes != null && attributes.Length > 0
-            select new { Type = t, Attributes = attributes.Cast<IntentAttribute>() };
-
-            foreach (var type in intentClasses)
-            {
-
-                //get intent name from attribute
-                var intentName = ((IntentAttribute)(Attribute.GetCustomAttribute(type.Type, typeof(IntentAttribute)))).IntentName;
-                intentMap.Add(intentName, type.Type);
-
-                //get method info for Process method
-                var mi = type.Type.GetMethod("Process", BindingFlags.Public| BindingFlags.Instance);
-
-                if (mi != null)
-                {
-                    //store intent name and connected Process method in dictionary
-                    intentHandlers.Add(intentName, (ProcessDelegate)mi.CreateDelegate(typeof(ProcessDelegate), null));
-                }
-                else
-                {
-                    throw new NotImplementedException("Process method is not implemented for class: " + type.Type.Name);
-                }
-            }
-
-            var intents = GetAllIntentsForAgent(agentId);
-            foreach (var intent in intents)
-            {
-                //check if all intents are implemented
-                if (!intentHandlers.ContainsKey(intent.DisplayName))
-                {
-                    Console.WriteLine("No class for " + intent.DisplayName);
-                }
-            }
-        }
-
-        private static Page<Intent> GetAllIntentsForAgent(string agentId)
-        {
-            ListIntentsRequest request = new ListIntentsRequest
-            {
-                Parent = "projects/" + agentId + "/agent"
-            };
-
-            IntentsClient client = new IntentsClientBuilder
-            {
-                CredentialsPath = @"C:\Users\Florian\DF-APIKEY-printassist.json"
-            }.Build();
-
-            var intents = client.ListIntents(request);
-
-            //ToDo: check if there are more than 100 intents
-            return intents.ReadPage(100);
-        }
-
-        #endregion
-
-
         public static async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
-            var user = users.GetUserById(update.Message.Chat.Id);
+            var conversation = await CheckForExistingConversation(update.Message.Chat.Id);
 
-            if (update.Type == UpdateType.Message)
+            await conversation.HandleUserInputAsync(update);
+
+            //if (update.Type == UpdateType.Message)
+            //{
+            //    if (update.Message.Document != null)
+            //    {
+            //        using FileStream fileStream = new FileStream(update.Message.Document.FileName, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Write);
+
+            //        var tmp = await bot.GetInfoAndDownloadFileAsync(update.Message.Document.FileId, fileStream);
+
+            //        if (Path.GetExtension(update.Message.Document.FileName) == ".stl")
+            //        {
+
+            //            await HandleStlInputAsync(update, user);
+            //        }
+            //        else if (Path.GetExtension(update.Message.Document.FileName) == ".gcode")
+            //        {
+            //            await SendMessageAsync(update.Message.Chat.Id, "got gcode");
+            //        }
+            //        else
+            //        {
+            //            await SendMessageAsync(update.Message.Chat.Id, "other file");
+            //        }
+            //    }
+            //    else if (update.Message.EntityValues != null) //message is a command
+            //    {
+            //        if (update.Message.EntityValues.FirstOrDefault().Equals("/start"))
+            //        {
+            //            await HandleNewUserAsync(update);
+            //        }
+            //    }
+            //    else
+            //    {
+
+
+            //        if (user != null)
+            //        {
+            //            switch (user.CurrentState)
+            //            {
+            //                case ConversationState.WaitingForUserName:
+            //                    await SendNameResponseMessage(update, user);
+            //                    break;
+            //                case ConversationState.Unknown:
+            //                    break;
+            //                case ConversationState.WorkflowTutorial:
+            //                case ConversationState.HardwareTutorial:
+            //                    await HandleUserInputDuringTutorialAsync(update, user);
+            //                    break;
+            //                case ConversationState.Idle:
+            //                    await HandleUserInputAsync(update, user, cancellationToken);
+            //                    break;
+            //                case ConversationState.WaitingForConfimationToStartWorkflowTutorial | ConversationState.Idle:
+            //                    await HandleUserInputAfterHardwareTutorialAsync(update, user);
+            //                    break;
+            //                case ConversationState.ReceivedStlFile:
+
+            //                    break;
+            //                default:
+            //                    break;
+            //            }
+            //        }
+            //        else
+            //        {
+            //            await HandleNewUserAsync(update);
+            //        }
+            //    }
+            //}
+        }
+
+        /// <summary>
+        /// checks for existing conversation. creates a new one if not found
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        private async static Task<Conversation> CheckForExistingConversation(long id)
+        {
+            var conversation = conversations.GetConversationById(id);
+            if (conversation == null)
             {
-                if(update.Message.Document != null)
-                {
-                    using FileStream fileStream = new FileStream(update.Message.Document.FileName, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Write);
-                    
-                    var tmp = await bot.GetInfoAndDownloadFileAsync(update.Message.Document.FileId, fileStream);
-
-                    if(Path.GetExtension(update.Message.Document.FileName) == ".stl")
-                    {
-
-                        await HandleStlInputAsync(update, user);
-                    }
-                    else if(Path.GetExtension(update.Message.Document.FileName) == ".gcode")
-                    {
-                        await SendMessageAsync(update.Message.Chat.Id, "got gcode");
-                    }
-                    else
-                    {
-                        await SendMessageAsync(update.Message.Chat.Id, "other file");
-                    }
-                }
-                else if (update.Message.EntityValues != null) //message is a command
-                {
-                    if (update.Message.EntityValues.FirstOrDefault().Equals("/start"))
-                    {
-                        await HandleNewUserAsync(update);
-                    }
-                }
-                else
-                {
-                    
-
-                    if (user != null)
-                    {
-                        switch (user.CurrentState)
-                        {
-                            case UserState.WaitingForUserName:
-                                await SendNameResponseMessage(update, user);
-                                break;
-                            case UserState.Unknown:
-                                break;
-                            case UserState.WorkflowTutorial:
-                            case UserState.HardwareTutorial:
-                                await HandleUserInputDuringTutorialAsync(update, user);
-                                break;
-                            case UserState.Idle:
-                                await HandleUserInputAsync(update, user, cancellationToken);
-                                break;
-                            case UserState.WaitingForConfimationToStartWorkflowTutorial | UserState.Idle:
-                                await HandleUserInputAfterHardwareTutorialAsync(update, user);
-                                break;
-                            case UserState.ReceivedStlFile:
-                                
-                                break;
-                            default:
-                                break;
-                        }
-                    }
-                    else
-                    {
-                        await HandleNewUserAsync(update);
-                    }
-                }
+                conversation = new Conversation(id, bot);
+                await conversation.StartAsync();
+                conversations.AddConversation(id, conversation);
             }
+            return conversation;
         }
 
-        private static async Task HandleStlInputAsync(Update update, Classes.User user)
-        {
-            user.CurrentState = UserState.ReceivedStlFile;
-            var keyboard =  new ReplyKeyboardMarkup(
-                            new KeyboardButton[] { "Nein", "Ja" },
-                            resizeKeyboard: true
-                        );
-            await SendMessageAsync(update.Message.Chat.Id, "I got your model. Should I slice it for you?", keyboard);
+        //private static async Task HandleStlInputAsync(Update update, Conversation user)
+        //{
+        //    user.CurrentState = ConversationState.ReceivedStlFile;
+        //    var keyboard =  new ReplyKeyboardMarkup(
+        //                    new KeyboardButton[] { "Nein", "Ja" },
+        //                    resizeKeyboard: true
+        //                );
+        //    await SendMessageAsync(update.Message.Chat.Id, "I got your model. Should I slice it for you?", keyboard);
 
 
 
-        }
+        //}
 
-        private static async Task HandleUserInputAfterHardwareTutorialAsync(Update update, Classes.User user)
-        {
-            var response = await CallDFAPIAsync(update.Message, "TutorialStarten-followup");
+        //private static async Task HandleUserInputAfterHardwareTutorialAsync(Update update, Conversation user)
+        //{
+        //    var response = await CallDFAPIAsync(update.Message, "TutorialStarten-followup");
 
-            switch (response)
-            {
-                case TutorialYes intent:
-                    await StartWorkflowTutorialAsync(user);
-                    break;
-                case TutorialNo intent:
-                    user.CurrentState = UserState.Idle;
-                    await SendMessageAsync(user.Id, "Ok. Was kann ich sonst für dich tun?", new ReplyKeyboardRemove());
-                    break;
-                default:
-                    break;
-            }
-        }
+        //    switch (response)
+        //    {
+        //        case TutorialYes intent:
+        //            await StartWorkflowTutorialAsync(user);
+        //            break;
+        //        case TutorialNo intent:
+        //            user.CurrentState = ConversationState.Idle;
+        //            await SendMessageAsync(user.Id, "Ok. Was kann ich sonst für dich tun?", new ReplyKeyboardRemove());
+        //            break;
+        //        default:
+        //            break;
+        //    }
+        //}
 
-        private static async Task StartWorkflowTutorialAsync(Classes.User user)
-        {
-            user.CurrentState = UserState.WorkflowTutorial;
+        //private static async Task StartWorkflowTutorialAsync(Conversation user)
+        //{
+        //    user.CurrentState = ConversationState.WorkflowTutorial;
 
-            ITutorialDataProvider data = new WorkflowTutorialDataProvider();
-            WorkflowTutorial tutorial = new WorkflowTutorial(user.Id, bot, data);
-            user.Tutorial = tutorial;
-            await tutorial.NextAsync();
+        //    ITutorialDataProvider data = new WorkflowTutorialDataProvider();
+        //    WorkflowTutorial tutorial = new WorkflowTutorial(user.Id, bot, data);
+        //    user.tutorial = tutorial;
+        //    await tutorial.NextAsync();
 
-        }
+        //}
 
-        private static async Task HandleUserInputDuringTutorialAsync(Update update, Classes.User user)
-        {
-            var intent = await CallDFAPIAsync(update.Message, "TutorialStarten-followup");
+        //private static async Task HandleUserInputDuringTutorialAsync(Update update, Conversation user)
+        //{
+        //    var intent = await CallDFAPIAsync(update.Message, "TutorialStarten-followup");
 
-            if (intent is TutorialNext)
-            {
-                if(await user.Tutorial.NextAsync())
-                {
-                    if (user.CurrentState == UserState.HardwareTutorial)
-                    {
-                        user.CurrentState = UserState.Idle | UserState.WaitingForConfimationToStartWorkflowTutorial;
-                    }
-                    else if(user.CurrentState == UserState.WorkflowTutorial)
-                    {
-                        user.CurrentState = UserState.Idle;
-                    }
-                    else
-                    {
-                        //we should not come here.
-                        throw new Exception("Invalid user state.");
-                    }
-                }
-            }
-            else if (intent is TutorialCancel)
-            {
-                await user.Tutorial.CancelAsync();
-                user.CurrentState = UserState.Idle;
-            }
-            else
-            {
-                await SendMessageAsync(user.Id, "Ich habe dich nicht verstanden");
-            }
-        }
+        //    if (intent is TutorialNext)
+        //    {
+        //        if(await user.Tutorial.NextAsync())
+        //        {
+        //            if (user.CurrentState == ConversationState.HardwareTutorial)
+        //            {
+        //                user.CurrentState = ConversationState.Idle | ConversationState.WaitingForConfimationToStartWorkflowTutorial;
+        //            }
+        //            else if(user.CurrentState == ConversationState.WorkflowTutorial)
+        //            {
+        //                user.CurrentState = ConversationState.Idle;
+        //            }
+        //            else
+        //            {
+        //                //we should not come here.
+        //                throw new Exception("Invalid user state.");
+        //            }
+        //        }
+        //    }
+        //    else if (intent is TutorialCancel)
+        //    {
+        //        await user.Tutorial.CancelAsync();
+        //        user.CurrentState = ConversationState.Idle;
+        //    }
+        //    else
+        //    {
+        //        await SendMessageAsync(user.Id, "Ich habe dich nicht verstanden");
+        //    }
+        //}
 
-        private static async Task HandleNewUserAsync(Update update)
-        {
-            await SendWelcomeMessageAsync(update);
-            users.AddUser(update.Message.Chat.Id, new Classes.User(update.Message.Chat.Id) { CurrentState = UserState.WaitingForUserName });
-        }
+        //private static async Task HandleNewUserAsync(Update update)
+        //{
+        //    await SendWelcomeMessageAsync(update);
+        //    users.AddUser(update.Message.Chat.Id, new Conversation(update.Message.Chat.Id) { CurrentState = ConversationState.WaitingForUserName });
+        //}
 
-        private static async Task HandleUserInputAsync(Update update, Classes.User user, CancellationToken cancellationToken)
-        {
-            try
-            {
-                await bot.SendChatActionAsync(update.Message.Chat.Id, ChatAction.Typing);
+        //private static async Task HandleUserInputAsync(Update update, Conversation user, CancellationToken cancellationToken)
+        //{
+        //    try
+        //    {
+        //        await bot.SendChatActionAsync(update.Message.Chat.Id, ChatAction.Typing);
 
-                var response = await CallDFAPIAsync(update.Message);
+        //        var response = await CallDFAPIAsync(update.Message);
 
-                switch (response)
-                {
-                    case TutorialStartIntent intent:
-                        {
-                            await StartHardwareTutorialAsync(user);
-                            break;
-                        }
-                    case DefaultFallbackIntent intent:
-                        {
-                            await SendMessageAsync(user.Id, intent.Process());
-                            break;
-                        }
-                    case WelcomeIntent intent:
-                        {
-                            await SendMessageAsync(user.Id, intent.Process());
-                            break;
-                        }
-                    default:
-                        await SendMessageAsync(user.Id, "Intent detected:" + response.GetType() +". There is no implementation for this intent yet.");
-                        break;
-                }
-            }
-            catch (Exception exception)
-            {
-                await HandleErrorAsync(bot, exception, cancellationToken);
-            }
-        }
-    
+        //        switch (response)
+        //        {
+        //            case TutorialStartIntent intent:
+        //                {
+        //                    await StartHardwareTutorialAsync(user);
+        //                    break;
+        //                }
+        //            case DefaultFallbackIntent intent:
+        //                {
+        //                    await SendMessageAsync(user.Id, intent.Process());
+        //                    break;
+        //                }
+        //            case WelcomeIntent intent:
+        //                {
+        //                    await SendMessageAsync(user.Id, intent.Process());
+        //                    break;
+        //                }
+        //            default:
+        //                await SendMessageAsync(user.Id, "Intent detected:" + response.GetType() +". There is no implementation for this intent yet.");
+        //                break;
+        //        }
+        //    }
+        //    catch (Exception exception)
+        //    {
+        //        await HandleErrorAsync(bot, exception, cancellationToken);
+        //    }
+        //}
 
-        private static async Task StartHardwareTutorialAsync(Classes.User user)
-        {
-            user.CurrentState = UserState.HardwareTutorial;
-            
-            ITutorialDataProvider data = new HardwareTutorialDataProvider();
-            HardwareTutorial tutorial = new HardwareTutorial(user.Id, bot, data);
-            user.Tutorial = tutorial;
-            await tutorial.NextAsync();
-        }
 
-        
+        //private static async Task StartHardwareTutorialAsync(Conversation user)
+        //{
+        //    user.CurrentState = ConversationState.HardwareTutorial;
 
-        private static async Task SendMessageAsync(Int64 chatId, string text, IReplyMarkup replyKeyboardMarkup = null)
-        {
-            await bot.SendTextMessageAsync(chatId: chatId,
-                            text: text,
-                            replyMarkup: replyKeyboardMarkup);
-        }
+        //    ITutorialDataProvider data = new HardwareTutorialDataProvider();
+        //    HardwareTutorial tutorial = new HardwareTutorial(user.Id, bot, data);
+        //    user.tutorial = tutorial;
+        //    await tutorial.NextAsync();
+        //}
 
-        private static async Task SendNameResponseMessage(Update update, Classes.User user)
-        {
-            var text = "Hi " + update.Message.Text + ". Was kann ich für dich tun?";
-            user.CurrentState = UserState.Idle;
-            user.Name = update.Message.Text;
-            await bot.SendTextMessageAsync(chatId: update.Message.Chat.Id,
-                            text: text,
-                            replyMarkup: new ReplyKeyboardRemove());
-        }
 
-        private static async Task SendWelcomeMessageAsync(Update update)
-        {
-            await bot.SendChatActionAsync(update.Message.Chat.Id, ChatAction.Typing);
 
-            var text = "Welcome Message: My name is Bot. I can do stuff. How should i call you?";
+        //private static async Task SendMessageAsync(Int64 chatId, string text, IReplyMarkup replyKeyboardMarkup = null)
+        //{
+        //    await bot.SendTextMessageAsync(chatId: chatId,
+        //                    text: text,
+        //                    replyMarkup: replyKeyboardMarkup);
+        //}
 
-            await bot.SendTextMessageAsync(chatId: update.Message.Chat.Id,
-                                            text: text,
-                                            replyMarkup: new ReplyKeyboardRemove());
-        }
+        //private static async Task SendNameResponseMessage(Update update, Conversation user)
+        //{
+        //    var text = "Hi " + update.Message.Text + ". Was kann ich für dich tun?";
+        //    user.CurrentState = ConversationState.Idle;
+        //    user.UserName = update.Message.Text;
+        //    await bot.SendTextMessageAsync(chatId: update.Message.Chat.Id,
+        //                    text: text,
+        //                    replyMarkup: new ReplyKeyboardRemove());
+        //}
+
+        //private static async Task SendWelcomeMessageAsync(Update update)
+        //{
+        //    await bot.SendChatActionAsync(update.Message.Chat.Id, ChatAction.Typing);
+
+        //    var text = "Welcome Message: My name is Bot. I can do stuff. How should i call you?";
+
+        //    await bot.SendTextMessageAsync(chatId: update.Message.Chat.Id,
+        //                                    text: text,
+        //                                    replyMarkup: new ReplyKeyboardRemove());
+        //}
 
         public static Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
         {
@@ -385,52 +337,52 @@ namespace PrintAssistConsole
             return Task.CompletedTask;
         }
 
-        public static async Task<object> CallDFAPIAsync(Telegram.Bot.Types.Message message, string contextName = null, bool clearContext = true)
-        {
-            var sessionId = message.Chat.Id;
+        //public static async Task<object> CallDFAPIAsync(Telegram.Bot.Types.Message message, string contextName = null, bool clearContext = true)
+        //{
+        //    var sessionId = message.Chat.Id;
 
-            var query = new QueryInput
-            {
-                Text = new TextInput
-                {
-                    Text = message.Text,
-                    LanguageCode = "de"
-                }
-            };
-    
-            var request = new DetectIntentRequest
-            {
-                SessionAsSessionName = new SessionName(agentId, sessionId.ToString()),
-                QueryInput = query,
-                QueryParams = new QueryParameters()
-            };
+        //    var query = new QueryInput
+        //    {
+        //        Text = new TextInput
+        //        {
+        //            Text = message.Text,
+        //            LanguageCode = "de"
+        //        }
+        //    };
 
-            if (contextName != null)
-            {
-                var context = new Context
-                {
-                    ContextName = new ContextName(agentId, sessionId.ToString(), contextName),
-                    LifespanCount = 3,
-                };
-                request.QueryParams.Contexts.Add(context);
-            }
-            else
-            {
-                request.QueryParams.ResetContexts = clearContext;
-            }
+        //    var request = new DetectIntentRequest
+        //    {
+        //        SessionAsSessionName = new SessionName(agentId, sessionId.ToString()),
+        //        QueryInput = query,
+        //        QueryParams = new QueryParameters()
+        //    };
 
-            SessionsClient client = new SessionsClientBuilder
-            {
-                CredentialsPath = dialogFlowAPIKeyFile
-            }.Build();
-            
-            var response = await client.DetectIntentAsync(request);
+        //    if (contextName != null)
+        //    {
+        //        var context = new Context
+        //        {
+        //            ContextName = new ContextName(agentId, sessionId.ToString(), contextName),
+        //            LifespanCount = 3,
+        //        };
+        //        request.QueryParams.Contexts.Add(context);
+        //    }
+        //    else
+        //    {
+        //        request.QueryParams.ResetContexts = clearContext;
+        //    }
 
-            var type = intentMap[response.QueryResult.Intent.DisplayName]; //key not found exception could be thrown here
-            var intent = (BaseIntent)Activator.CreateInstance(type);
-            intent.response = response;
-            return intent;
-        }
+        //    SessionsClient client = new SessionsClientBuilder
+        //    {
+        //        CredentialsPath = dialogFlowAPIKeyFile
+        //    }.Build();
+
+        //    var response = await client.DetectIntentAsync(request);
+
+        //    var type = intentMap[response.QueryResult.Intent.DisplayName]; //key not found exception could be thrown here
+        //    var intent = (BaseIntent)Activator.CreateInstance(type);
+        //    intent.response = response;
+        //    return intent;
+        //}
 
         //private static string ProcessIntent(DetectIntentResponse response)
         //{
