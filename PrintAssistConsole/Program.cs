@@ -248,10 +248,12 @@ namespace PrintAssistConsole
         private static async Task StartWorkflowTutorialAsync(Classes.User user)
         {
             user.CurrentState = UserState.WorkflowTutorial;
-            //user.Tutorial = new Tutorial(JsonTutorial.DefaulWorkflowTutorial());
-            //var message = user.Tutorial.GetNextMessage();
-            //await message.SendAsync(bot, user.Id);
-            //await SendTutorialMessageAsync(user.Id, message);
+
+            ITutorialDataProvider data = new WorkflowTutorialDataProvider();
+            WorkflowTutorial tutorial = new WorkflowTutorial(user.Id, bot, data);
+            user.Tutorial = tutorial;
+            await tutorial.NextAsync();
+
         }
 
         private static async Task HandleUserInputDuringTutorialAsync(Update update, Classes.User user)
@@ -260,34 +262,27 @@ namespace PrintAssistConsole
 
             if (intent is TutorialNext)
             {
-                if(await user.Tutorial.Next())
+                if(await user.Tutorial.NextAsync())
                 {
-                    user.CurrentState = UserState.Idle | UserState.WaitingForConfimationToStartWorkflowTutorial;
+                    if (user.CurrentState == UserState.HardwareTutorial)
+                    {
+                        user.CurrentState = UserState.Idle | UserState.WaitingForConfimationToStartWorkflowTutorial;
+                    }
+                    else if(user.CurrentState == UserState.WorkflowTutorial)
+                    {
+                        user.CurrentState = UserState.Idle;
+                    }
+                    else
+                    {
+                        //we should not come here.
+                        throw new Exception("Invalid user state.");
+                    }
                 }
-                //if (!user.Tutorial.isFinished)
-                //{
-                //    var message = user.Tutorial.GetNextMessage();
-                //    if (message.IsLastMessage)
-                //    {
-                //        if (user.CurrentState == UserState.HardwareTutorial)
-                //        {
-                //            
-                //        }
-                //        else
-                //        {
-                //            user.CurrentState = UserState.Idle;
-                //        }
-                //    }
-                //    //await message.SendAsync(bot, user.Id);
-                //    await SendTutorialMessageAsync(user.Id, message);
-                //}
             }
             else if (intent is TutorialCancel)
             {
-                await user.Tutorial.Cancel();
+                await user.Tutorial.CancelAsync();
                 user.CurrentState = UserState.Idle;
-                
-                //await SendMessageAsync(user.Id, "Abbruch Abbruch!", new ReplyKeyboardRemove());
             }
             else
             {
@@ -313,7 +308,7 @@ namespace PrintAssistConsole
                 {
                     case TutorialStartIntent intent:
                         {
-                            await StartHardwareTutorialAsync(user, intent);
+                            await StartHardwareTutorialAsync(user);
                             break;
                         }
                     case DefaultFallbackIntent intent:
@@ -327,6 +322,7 @@ namespace PrintAssistConsole
                             break;
                         }
                     default:
+                        await SendMessageAsync(user.Id, "Intent detected:" + response.GetType() +". There is no implementation for this intent yet.");
                         break;
                 }
             }
@@ -337,18 +333,14 @@ namespace PrintAssistConsole
         }
     
 
-        private static async Task StartHardwareTutorialAsync(Classes.User user, TutorialStartIntent intent)
+        private static async Task StartHardwareTutorialAsync(Classes.User user)
         {
             user.CurrentState = UserState.HardwareTutorial;
-            //user.Tutorial = new Tutorial(JsonTutorial.DefaulHardwareTutorial());
-            //var message = user.Tutorial.GetNextMessage();
-            ////await message.SendAsync(bot, user.Id);
-            //await SendTutorialMessageAsync(user.Id, message);
+            
             ITutorialDataProvider data = new HardwareTutorialDataProvider();
             HardwareTutorial tutorial = new HardwareTutorial(user.Id, bot, data);
             user.Tutorial = tutorial;
-            
-            await tutorial.Next();
+            await tutorial.NextAsync();
         }
 
         

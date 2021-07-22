@@ -11,7 +11,7 @@ namespace PrintAssistConsole.Classes
         public Int64 Id { get; private set; }
         public UserState CurrentState { get; set; }
         public string Name { get; internal set; }
-        public HardwareTutorial Tutorial { get; internal set; }
+        public Tutorial Tutorial { get; internal set; }
 
         public User(Int64 id)
         {
