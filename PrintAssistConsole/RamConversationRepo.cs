@@ -17,9 +17,16 @@ namespace PrintAssistConsole
             conversations = new Dictionary<long, Conversation>();
         }
 
-        public bool AddConversation(long id, Conversation conversation)
+        public void AddConversation(long id, Conversation conversation)
         {
-            return conversations.TryAdd(id, conversation);
+            if(conversations.ContainsKey(id))
+            {
+                conversations[id] = conversation;
+            }
+            else
+            {
+                conversations.Add(id, conversation);
+            }
         }
 
         public Conversation GetConversationById(long id)

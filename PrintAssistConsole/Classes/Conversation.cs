@@ -2,6 +2,7 @@
 using Stateless;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -12,6 +13,30 @@ using Telegram.Bot.Types.ReplyMarkups;
 
 namespace PrintAssistConsole
 {
+    public class CustomKeyboards
+    {
+        public static ReplyKeyboardMarkup NoYesKeyboard
+        {
+            get
+            {
+                return new ReplyKeyboardMarkup(
+                            new KeyboardButton[] { "Nein", "Ja" },
+                            resizeKeyboard: true
+                        );
+            }
+        }
+
+        public static ReplyKeyboardMarkup ExpertBeginnerKeyboard
+        {
+            get
+            {
+                return new ReplyKeyboardMarkup(
+                            new KeyboardButton[] { "Expert", "Beginner" },
+                            resizeKeyboard: true);
+            }
+        }
+        
+    }
 
     public class Conversation
     {
@@ -22,13 +47,18 @@ namespace PrintAssistConsole
             HardwareTutorialFinished,
             StartWorkflowTutorial,
             WorkTutorialFinished,
-            HardwareTutorialCanceled
+            HardwareTutorialCanceled,
+            WorkTutorialCanceled,
+            STLFileReceived,
+            StartSlicing,
+            Cancel
         }
 
         public Int64 Id { get; private set; }
         public string UserName { get; internal set; }
         private Tutorial tutorial;
-
+        private SlicingProcess slicingProcess;
+        private string selectedModel;
         private readonly StateMachine<ConversationState, Trigger> machine;
         protected readonly ITelegramBotClient bot;
 
@@ -70,7 +100,9 @@ namespace PrintAssistConsole
 
             machine.Configure(ConversationState.Idle)
                 .OnEntryAsync(async () => await SendMessageAsync("What can i do for you?"))
-                .Permit(Trigger.StartHardwareTutorial, ConversationState.HardwareTutorial);
+                .Permit(Trigger.StartWorkflowTutorial, ConversationState.WorkflowTutorial)
+                .Permit(Trigger.StartHardwareTutorial, ConversationState.HardwareTutorial)
+                .Permit(Trigger.STLFileReceived, ConversationState.STLFileReceived);
 
             machine.Configure(ConversationState.HardwareTutorial)
                 .OnEntryAsync(async () => await StartHardwareTutorialAsync())
@@ -78,10 +110,31 @@ namespace PrintAssistConsole
                 .Permit(Trigger.StartWorkflowTutorial, ConversationState.WorkflowTutorial)
                 .Permit(Trigger.HardwareTutorialCanceled, ConversationState.Idle);
 
-
             machine.Configure(ConversationState.WorkflowTutorial)
                 .OnEntryAsync(async () => await StartWorkflowTutorialAsync())
+                .Permit(Trigger.WorkTutorialCanceled, ConversationState.Idle)
                 .Permit(Trigger.WorkTutorialFinished, ConversationState.Idle);
+
+            machine.Configure(ConversationState.STLFileReceived)
+                .OnEntryAsync(async () => await AskForSlicingNowAsync())
+                .Permit(Trigger.Cancel, ConversationState.Idle)
+                .Permit(Trigger.StartSlicing, ConversationState.Slicing);
+
+            machine.Configure(ConversationState.Slicing)
+                .OnEntryAsync(async () => await StartSlicingAsync())
+                .Permit(Trigger.Cancel, ConversationState.Idle);
+                
+        }
+
+        private async Task StartSlicingAsync()
+        {
+            this.slicingProcess = new SlicingProcess(Id, bot, selectedModel);
+            await slicingProcess.StartAsync();
+        }
+
+        private async Task AskForSlicingNowAsync()
+        {
+            await SendMessageAsync("I got your model. Should I slice it for you now?", CustomKeyboards.NoYesKeyboard);
         }
 
         private async Task StartWorkflowTutorialAsync()
@@ -107,7 +160,7 @@ namespace PrintAssistConsole
 
         private async Task SendWelcomeMessageAsync()
         {
-            await SendMessageAsync("Hi I am your Print assist. I can do stuff for you. How should i call you?");
+            await SendMessageAsync("Hi I am your print assistant. I can do stuff for you. How should i call you?");
         }
         private async Task SendMessageAsync(string text, IReplyMarkup replyKeyboardMarkup = null)
         {
@@ -120,6 +173,7 @@ namespace PrintAssistConsole
 
         public async Task HandleUserInputAsync(Update update)
         {
+           
             if (update.Type == UpdateType.Message) //only react on normal messages, ignores edited messages.
             {
                 switch (machine.State)
@@ -139,28 +193,58 @@ namespace PrintAssistConsole
                         }
                     case ConversationState.Idle:
                         {
-                            var intent = await IntentDetector.Instance.CallDFAPIAsync(Id, update.Message.Text);
-
-                            switch (intent)
+                            if (update.Message.Document != null)
                             {
-                                case TutorialStartIntent:
-                                    {
-                                        await machine.FireAsync(Trigger.StartHardwareTutorial);
+                                var path = update.Message.Document.FileName;
+                                using FileStream fileStream = new FileStream(path, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Write);
+                                {
+                                    var tmp = await bot.GetInfoAndDownloadFileAsync(update.Message.Document.FileId, fileStream);
+                                }
+
+                                if (Path.GetExtension(update.Message.Document.FileName) == ".stl")
+                                {
+                                    selectedModel = path; // this should be done after the user confirmed to slice the file now.
+                                    await machine.FireAsync(Trigger.STLFileReceived);
+                                }
+                                else if (Path.GetExtension(update.Message.Document.FileName) == ".gcode")
+                                {
+                                    await SendMessageAsync("got gcode");
+                                }
+                                else
+                                {
+                                    await SendMessageAsync("other file");
+                                }
+                            }
+                            else
+                            {
+                                var intent = await IntentDetector.Instance.CallDFAPIAsync(Id, update.Message.Text);
+
+                                switch (intent)
+                                {
+                                    case HardwareTutorialStartIntent:
+                                        {
+                                            await machine.FireAsync(Trigger.StartHardwareTutorial);
+                                            break;
+                                        }
+                                    case DefaultFallbackIntent defaultFallbackIntent:
+                                        {
+                                            await SendMessageAsync(defaultFallbackIntent.Process());
+                                            break;
+                                        }
+                                    case WelcomeIntent welcomeIntent:
+                                        {
+                                            await SendMessageAsync(welcomeIntent.Process());
+                                            break;
+                                        }
+                                    case WorkflowTutorialStartIntent:
+                                        {
+                                            await machine.FireAsync(Trigger.StartWorkflowTutorial);
+                                            break;
+                                        }
+                                    default:
+                                        await SendMessageAsync("Intent detected:" + intent.GetType() + ". There is no implementation for this intent yet.");
                                         break;
-                                    }
-                                case DefaultFallbackIntent defaultFallbackIntent:
-                                    {
-                                        await SendMessageAsync(defaultFallbackIntent.Process());
-                                        break;
-                                    }
-                                case WelcomeIntent welcomeIntent:
-                                    {
-                                        await SendMessageAsync(welcomeIntent.Process());
-                                        break;
-                                    }
-                                default:
-                                    await SendMessageAsync("Intent detected:" + intent.GetType() + ". There is no implementation for this intent yet.");
-                                    break;
+                                }
                             }
                             break;
                         }
@@ -217,6 +301,7 @@ namespace PrintAssistConsole
                                 case TutorialCancel:
                                     {
                                         await tutorial.CancelAsync();
+                                        await machine.FireAsync(Trigger.WorkTutorialCanceled);
                                         break;
                                     }
                                 default:
@@ -229,16 +314,41 @@ namespace PrintAssistConsole
                     case ConversationState.SendGcodeFile:
                         break;
                     case ConversationState.Slicing:
-                        break;
+                        {
+                            await slicingProcess.HandleInputAsync(update);
+                            break;
+                        }
                     case ConversationState.StartingPrint:
                         break;
+                    case ConversationState.STLFileReceived:
+                        {
+                            var intent = await IntentDetector.Instance.CallDFAPIAsync(Id, update.Message.Text, "TutorialStarten-followup"); //reuse the Yes No intents from the tutorial
+                            switch (intent)
+                            {
+                                case TutorialYes:
+                                    {
+                                        await machine.FireAsync(Trigger.StartSlicing);
+                                        break;
+                                    }
+                                case TutorialNo:
+                                    {
+                                        await SendMessageAsync("Okay, I will store it for you. You can ask me later to slice it.");
+                                        await machine.FireAsync(Trigger.Cancel);
+                                        break;
+                                    }
+                                default:
+                                    break;
+                            }
+
+                            break;
+                        }
                     default:
                         break;
                 }
             }
         }
 
-        
+     
 
         private void AssignUserName(string name)
         {

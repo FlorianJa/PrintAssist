@@ -31,7 +31,7 @@ namespace PrintAssistConsole
 
         public abstract Task CancelAsync();
 
-        protected async Task SendTutorialMessageAsync(Int64 id, TutorialMessage message)
+        protected async Task SendTutorialMessageAsync(Int64 id, Message message)
         {
             #region send photo(s)
             if (message.PhotoFilePaths != null)

@@ -88,7 +88,16 @@ namespace PrintAssistConsole
 
             var response = await client.DetectIntentAsync(request);
 
-            var type = intentMap[response.QueryResult.Intent.DisplayName]; //key not found exception could be thrown here
+            Type type;
+            try
+            {
+                type = intentMap[response.QueryResult.Intent.DisplayName]; //key not found exception could be thrown here
+
+            }
+            catch (Exception)
+            {
+                return null;
+            }
             var intent = (BaseIntent)Activator.CreateInstance(type);
             intent.response = response;
             return intent;

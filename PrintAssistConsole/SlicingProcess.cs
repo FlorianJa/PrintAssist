@@ -1,18 +1,23 @@
-﻿using Stateless;
+﻿using Newtonsoft.Json;
+using Stateless;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Telegram.Bot;
+using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
+using Telegram.Bot.Types.InputFiles;
+using Telegram.Bot.Types.ReplyMarkups;
 
 namespace PrintAssistConsole
 {
     public enum SlicingProcessState : int
     {
         BeforeStart = -1,
-        Start,
-        StoringFile,
         ModeSelection,
         ExpertModeLayerHeight,
         BeginnerModeQuality,
@@ -46,37 +51,48 @@ namespace PrintAssistConsole
             No
         }
 
+        private readonly SlicingDialogDataProvider dialogData;
+        private readonly ITelegramBotClient bot;
+        private readonly long id;
         private readonly StateMachine<SlicingProcessState, Trigger> machine;
+        private float layerHeight;
+        private int infillPercentage;
 
-        public SlicingProcess(long chatId, ITelegramBotClient bot)
+        public SlicingProcess(long chatId, ITelegramBotClient bot, string modelPath)
         {
+            dialogData = new SlicingDialogDataProvider();
+            this.bot = bot;
+            this.id = chatId;
+
             // Instantiate a new state machine in the Start state
             machine = new StateMachine<SlicingProcessState, Trigger>(SlicingProcessState.BeforeStart);
 
             #region setup statemachine
             // Configure the before start state
             machine.Configure(SlicingProcessState.BeforeStart)
-                .Permit(Trigger.Start, SlicingProcessState.Start);
+                .Permit(Trigger.Start, SlicingProcessState.ModeSelection);
 
-            machine.Configure(SlicingProcessState.Start)
-                //.OnEntryAsync(async () => ) 
-                .Permit(Trigger.No, SlicingProcessState.StoringFile)
-                .Permit(Trigger.Yes, SlicingProcessState.ModeSelection);
+            //machine.Configure(SlicingProcessState.Start)
+            //    .OnEntryAsync(async () => await SendMessageAsync(machine.State)) 
+            //    .Permit(Trigger.No, SlicingProcessState.StoringFile)
+            //    .Permit(Trigger.Yes, SlicingProcessState.ModeSelection);
 
-            machine.Configure(SlicingProcessState.StoringFile);
-            //.OnEntryAsync(async () => ) 
+            //machine.Configure(SlicingProcessState.StoringFile);
+            ////.OnEntryAsync(async () => ) 
 
             machine.Configure(SlicingProcessState.ModeSelection)
-                //.OnEntryAsync(async () => ) 
+                .OnEntryAsync(async () => await SendMessageAsync(machine.State))
                 .Permit(Trigger.SelectingExpertMode, SlicingProcessState.ExpertModeLayerHeight)
                 .Permit(Trigger.SelectingBeginnerMode, SlicingProcessState.BeginnerModeQuality);
 
             machine.Configure(SlicingProcessState.ExpertModeLayerHeight)
-                //.OnEntryAsync(async () => ) 
+                .OnEntryAsync(async () => await SendMessageAsync(machine.State))
+                .OnExit(async () => await SendMessageAsync($"Layer height = {layerHeight:F2} mm"))
                 .Permit(Trigger.Next, SlicingProcessState.ExpertModeInfill);
 
             machine.Configure(SlicingProcessState.ExpertModeInfill)
-                //.OnEntryAsync(async () => ) 
+                .OnEntryAsync(async () => await SendMessageAsync(machine.State))
+                .OnExitAsync(async () => await SendMessageAsync($"Infill = {infillPercentage}%"))
                 .Permit(Trigger.Next, SlicingProcessState.ExpertModeSupport);
 
             machine.Configure(SlicingProcessState.ExpertModeSupport)
@@ -109,6 +125,241 @@ namespace PrintAssistConsole
                 .Permit(Trigger.Next, SlicingProcessState.AskToPrintNow);
 
             #endregion
+        }
+
+        public async Task StartAsync()
+        {
+            await machine.FireAsync(Trigger.Start);
+        }
+        private async Task SendMessageAsync(SlicingProcessState state)
+        {
+            var message = dialogData.GetMessage((int)state);
+            await SendMessageAsync(message);
+        }
+
+        private async Task SendMessageAsync(Message message)
+        {
+            #region send photo(s)
+            if (message.PhotoFilePaths != null)
+            {
+                if (message.PhotoFilePaths.Count == 1)
+                {
+                    if (System.IO.File.Exists(message.PhotoFilePaths[0]))
+                    {
+                        await bot.SendChatActionAsync(id, ChatAction.UploadPhoto);
+                        using FileStream fileStream = new(message.PhotoFilePaths[0], FileMode.Open, FileAccess.Read, FileShare.Read);
+                        var fileName = message.PhotoFilePaths[0].Split(Path.DirectorySeparatorChar).Last();
+                        await bot.SendPhotoAsync(chatId: id, photo: new InputOnlineFile(fileStream, fileName));
+                    }
+                }
+                else if (message.PhotoFilePaths.Count > 1)
+                {
+                    await bot.SendChatActionAsync(id, ChatAction.UploadPhoto);
+
+                    var album = new List<IAlbumInputMedia>();
+                    var tmp = new List<FileStream>();
+                    foreach (var path in message.PhotoFilePaths)
+                    {
+                        if (System.IO.File.Exists(path))
+                        {
+
+                            FileStream fileStream = new(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+                            tmp.Add(fileStream);
+                            var fileName = path.Split(Path.DirectorySeparatorChar).Last();
+
+                            album.Add(new InputMediaPhoto(new InputMedia(fileStream, fileName)));
+                        }
+                    }
+
+                    await bot.SendMediaGroupAsync(chatId: id, inputMedia: album);
+
+                    foreach (var stream in tmp)
+                    {
+                        stream.Dispose();
+                    }
+                    tmp.Clear();
+                }
+            }
+            #endregion
+
+            #region send video(s)
+            if (message.VideoFilePaths != null)
+            {
+                if (message.VideoFilePaths.Count == 1)
+                {
+
+                    if (System.IO.File.Exists(message.VideoFilePaths[0]))
+                    {
+                        await bot.SendChatActionAsync(id, ChatAction.UploadVideo);
+                        using FileStream fileStream = new(message.VideoFilePaths[0], FileMode.Open, FileAccess.Read, FileShare.Read);
+                        var fileName = message.VideoFilePaths[0].Split(Path.DirectorySeparatorChar).Last();
+                        await bot.SendVideoAsync(chatId: id, video: new InputOnlineFile(fileStream, fileName));
+                    }
+                }
+                else if (message.VideoFilePaths.Count > 1)
+                {
+                    await bot.SendChatActionAsync(id, ChatAction.UploadVideo);
+
+                    var album = new List<IAlbumInputMedia>();
+                    foreach (var path in message.VideoFilePaths)
+                    {
+                        if (System.IO.File.Exists(path))
+                        {
+                            using FileStream fileStream = new(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+                            var fileName = path.Split(Path.DirectorySeparatorChar).Last();
+
+                            album.Add(new InputMediaPhoto(new InputMedia(fileStream, fileName)));
+                        }
+                    }
+
+                    await bot.SendMediaGroupAsync(chatId: id, inputMedia: album);
+                }
+            }
+            #endregion
+
+            #region send text
+            if (message.Text != null)
+            {
+                await bot.SendChatActionAsync(id, ChatAction.Typing);
+                await bot.SendTextMessageAsync(chatId: id,
+                            text: message.Text,
+                            replyMarkup: message.ReplyKeyboardMarkup);
+            }
+            #endregion
+        }
+
+        public async Task HandleInputAsync(Update update)
+        {
+            switch (machine.State)
+            {
+                case SlicingProcessState.BeforeStart:
+                    break;
+                case SlicingProcessState.ModeSelection:
+                    {
+                        switch (update.Message.Text.ToLower())
+                        {
+                            case "expert":
+                                {
+                                    await machine.FireAsync(Trigger.SelectingExpertMode);
+                                    break;
+                                }
+                            case "beginner":
+                                {
+                                    await machine.FireAsync(Trigger.SelectingBeginnerMode);
+                                    break;
+                                }
+                            default:
+                                {
+                                    await SendMessageAsync("Bitte wähe einen Slicingmode aus [Expert/Beginner] oder sag abbrechen, wenn du den Vorgang abbrechen möchtest.", CustomKeyboards.ExpertBeginnerKeyboard);
+                                    break;
+                                }
+                        }
+                        break;
+                    }
+                case SlicingProcessState.ExpertModeLayerHeight:
+                    {
+                        Regex rx = new Regex(@"\d*[,.]\d+", RegexOptions.Compiled);
+
+                        var match = rx.Match(update.Message.Text);
+
+                        if(match.Success)
+                        {
+                            layerHeight = float.Parse(match.Value);
+                            //check if value is in range
+
+                            await machine.FireAsync(Trigger.Next);
+                        }
+                        else
+                        {
+                            await SendMessageAsync("Bitte wähle eine Layer Height aus der Auswahl unten aus oder gibt die Zahl in Millimeter ein.");
+                        }
+
+                        break;
+                    }
+                case SlicingProcessState.BeginnerModeQuality:
+                    break;
+                case SlicingProcessState.ExpertModeInfill:
+                    {
+                        Regex rx = new Regex(@"\d*", RegexOptions.Compiled);
+
+                        var match = rx.Match(update.Message.Text);
+
+                        if (match.Success)
+                        {
+                            infillPercentage = Int32.Parse(match.Value);
+                            //check if value is in range
+
+                            await machine.FireAsync(Trigger.Next);
+                        }
+                        else
+                        {
+                            await SendMessageAsync("Bitte wähle eine Füllmenge aus der Auswahl unten aus oder gibt die Zahl in Prozent ein.");
+                        }
+                        break;
+                    }
+                case SlicingProcessState.ExpertModeSupport:
+                    break;
+                case SlicingProcessState.ExpertModeAskToChangeOtherParameters:
+                    break;
+                case SlicingProcessState.AskToPrintNow:
+                    break;
+                case SlicingProcessState.ExpertModeAskForParameterName:
+                    break;
+                case SlicingProcessState.EndSlicingWithoutPrinting:
+                    break;
+                case SlicingProcessState.EndSlicingWithPrinting:
+                    break;
+                case SlicingProcessState.BeginnerModeSurfaceSelection:
+                    break;
+                case SlicingProcessState.BeginnerModeMechanicalForce:
+                    break;
+                case SlicingProcessState.BeginnerModeOverhangs:
+                    break;
+                case SlicingProcessState.BeginnerModeSummary:
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        private async Task SendMessageAsync(string text, IReplyMarkup keyboardMarkup = null)
+        {
+            keyboardMarkup ??= new ReplyKeyboardRemove();
+
+            await bot.SendChatActionAsync(id, ChatAction.Typing);
+            await bot.SendTextMessageAsync(chatId: id,
+                        text: text,
+                        replyMarkup: keyboardMarkup); 
+            
+        }
+    }
+
+
+    public class SlicingDialogDataProvider : ITutorialDataProvider
+    {
+        public Dictionary<SlicingProcessState, Message> messages { get; set; }
+
+        public SlicingDialogDataProvider()
+        {
+            // deserialize JSON directly from a file
+            using (StreamReader streamReader = System.IO.File.OpenText(@".\BotContent\SlicingProcess.json"))
+            {
+                using (var jsonReader = new JsonTextReader(streamReader))
+                {
+                    JsonSerializer serializer = new JsonSerializer();
+                    messages = serializer.Deserialize<Dictionary<SlicingProcessState, Message>>(jsonReader);
+                }
+            }
+        }
+
+        public Message GetMessage(int state)
+        {
+            return messages[(SlicingProcessState)state];
+        }
+
+        public int GetMessageCount()
+        {
+            return messages.Count;
         }
     }
 }

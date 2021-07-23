@@ -7,7 +7,7 @@ using Telegram.Bot.Types.ReplyMarkups;
 
 namespace PrintAssistConsole
 {
-    public class TutorialMessage
+    public class Message
     {
         public string Text { get; set; }
         public List<string> PhotoFilePaths { get; set; }
@@ -39,7 +39,7 @@ namespace PrintAssistConsole
         }
 
 
-        public TutorialMessage(string text = null, List<string> photoFilePath = null, List<string> videoFilePath = null, List<string> keyboardButtons = null)
+        public Message(string text = null, List<string> photoFilePath = null, List<string> videoFilePath = null, List<string> keyboardButtons = null)
         {
             Text = text;
             PhotoFilePaths = photoFilePath;
@@ -47,7 +47,7 @@ namespace PrintAssistConsole
             KeyboardButtons = keyboardButtons;
         }
 
-        public TutorialMessage()
+        public Message()
         {
 
         }

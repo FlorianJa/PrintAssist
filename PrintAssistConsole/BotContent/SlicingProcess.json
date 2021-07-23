@@ -1,23 +1,23 @@
 {
 	0:
 	{
-		"text": "Okay, let's take a look at what you need to do before you can start printing.",
-		"KeyboardButtons": [ "Erklärung abbrechen", "Weiter" ]
+		"text": "Okay, in which mode do you want to slice the model?",
+		"KeyboardButtons": [ "Expert", "Beginner" ]
 	},
 	1:
 	{
-		"text": "First, you need a 3D model of the object you want to print. You can create your own model or you can download a model from the internet. I can also search for 3D models on the web for you.",
-		"KeyboardButtons": [ "Erklärung abbrechen", "Weiter" ]
+		"text": "Let's start slicing! How high should the layers be?",
+		"KeyboardButtons": [ "0,07 mm", "0,1 mm", "0,15 mm", "0,2 mm", "0,25 mm", "0,3 mm" ]
 	},
 	2:
 	{
-		"text": "Next, you need to convert the model into machine code thus the printer knows what to do. This process is called slicing. The model is cut into thin layers and the movement of the printer is calculated.",
-		"KeyboardButtons": [ "Erklärung abbrechen", "Weiter" ]
+		"text": "How much infill do you want?",
+		"KeyboardButtons": [ "15%", "20%","25%","50%","75%","100%" ]
 	},
 	3:
 	{
-		"text": "You can set a lot of different parameters in the slicing process which effect the quality, stability and the print duration of the object.",
-		"KeyboardButtons": [ "Erklärung abbrechen", "Weiter" ]
+		"text": "How much infill do you want?",
+		"KeyboardButtons": [ "15%", "20%","25%","50%","75%","100%" ]
 	},
 	4:
 	{

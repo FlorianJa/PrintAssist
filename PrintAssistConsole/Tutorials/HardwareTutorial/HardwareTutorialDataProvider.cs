@@ -10,7 +10,7 @@ namespace PrintAssistConsole
 {
     public class HardwareTutorialDataProvider : ITutorialDataProvider
     {
-        public Dictionary<HardwareTutorialState,TutorialMessage> messages { get; set; }
+        public Dictionary<HardwareTutorialState,Message> messages { get; set; }
 
         public HardwareTutorialDataProvider()
         {
@@ -20,12 +20,12 @@ namespace PrintAssistConsole
                 using (var jsonReader = new JsonTextReader(streamReader))
                 {
                     JsonSerializer serializer = new JsonSerializer();
-                    messages = serializer.Deserialize<Dictionary<HardwareTutorialState, TutorialMessage>>(jsonReader);
+                    messages = serializer.Deserialize<Dictionary<HardwareTutorialState, Message>>(jsonReader);
                 } 
             }
         }
 
-        public TutorialMessage GetMessage(int state)
+        public Message GetMessage(int state)
         {
             return messages[(HardwareTutorialState)state];
         }

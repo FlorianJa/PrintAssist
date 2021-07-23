@@ -10,7 +10,7 @@ namespace PrintAssistConsole
 { 
     public class WorkflowTutorialDataProvider : ITutorialDataProvider
     {
-        public Dictionary<WorkflowTutorialState, TutorialMessage> messages { get; set; }
+        public Dictionary<WorkflowTutorialState, Message> messages { get; set; }
 
         public WorkflowTutorialDataProvider()
         {
@@ -20,12 +20,12 @@ namespace PrintAssistConsole
                 using (var jsonReader = new JsonTextReader(streamReader))
                 {
                     JsonSerializer serializer = new JsonSerializer();
-                    messages = serializer.Deserialize<Dictionary<WorkflowTutorialState, TutorialMessage>>(jsonReader);
+                    messages = serializer.Deserialize<Dictionary<WorkflowTutorialState, Message>>(jsonReader);
                 }
             }
         }
 
-        public TutorialMessage GetMessage(int state)
+        public Message GetMessage(int state)
         {
             return messages[(WorkflowTutorialState)state];
         }

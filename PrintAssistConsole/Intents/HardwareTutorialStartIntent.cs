@@ -8,12 +8,12 @@ using System.Threading.Tasks;
 
 namespace PrintAssistConsole.Intents
 {
-    [IntentAttribute("TutorialStarten")]
-    public class TutorialStartIntent:BaseIntent
+    [IntentAttribute("HardwareTutorialStarten")]
+    public class HardwareTutorialStartIntent:BaseIntent
     {
         public override string Process()
         {
-            return "Okay, ich erkläre dir den Drucker.";
+            throw new NotImplementedException();
         }
     }
 }

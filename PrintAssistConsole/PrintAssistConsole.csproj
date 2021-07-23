@@ -64,6 +64,9 @@
     <None Update="BotContent\images\Timelapse.gif">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="BotContent\SlicingProcess.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="BotContent\WorkflowTutorial.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

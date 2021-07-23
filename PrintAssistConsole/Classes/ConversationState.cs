@@ -15,6 +15,7 @@ namespace PrintAssistConsole
         SendGcodeFile,
         Slicing,
         StartingPrint,
-        Unknown
+        Unknown,
+        STLFileReceived
     }
 }

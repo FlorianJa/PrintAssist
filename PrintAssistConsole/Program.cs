@@ -78,7 +78,17 @@ namespace PrintAssistConsole
 
         public static async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
-            var conversation = await CheckForExistingConversation(update.Message.Chat.Id);
+            Conversation conversation;
+
+            if (update.Message.EntityValues != null) //message is a command
+            {
+                if (update.Message.EntityValues.FirstOrDefault().Equals("/start"))
+                {
+                    await HandleNewUserAsync(update);
+                }
+            }
+
+            conversation = await CheckForExistingConversation(update.Message.Chat.Id);
 
             await conversation.HandleUserInputAsync(update);
 
@@ -242,11 +252,12 @@ namespace PrintAssistConsole
         //    }
         //}
 
-        //private static async Task HandleNewUserAsync(Update update)
-        //{
-        //    await SendWelcomeMessageAsync(update);
-        //    users.AddUser(update.Message.Chat.Id, new Conversation(update.Message.Chat.Id) { CurrentState = ConversationState.WaitingForUserName });
-        //}
+        private static async Task HandleNewUserAsync(Update update)
+        {
+            var conversation = new Conversation(update.Message.Chat.Id, bot);
+            conversations.AddConversation(update.Message.Chat.Id, conversation);
+            await conversation.StartAsync();
+        }
 
         //private static async Task HandleUserInputAsync(Update update, Conversation user, CancellationToken cancellationToken)
         //{

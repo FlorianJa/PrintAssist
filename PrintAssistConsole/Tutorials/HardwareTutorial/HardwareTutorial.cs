@@ -89,8 +89,8 @@ namespace PrintAssistConsole
                 .OnEntryAsync(async () => await SendMessageAsync(machine.State));
 
             // Configure the Cancel state
-            machine.Configure(HardwareTutorialState.Cancel);
-                //.OnEntryAsync(async () => await SendMessageAsync(machine.State));
+            machine.Configure(HardwareTutorialState.Cancel)
+                .OnEntryAsync(async () => await SendMessageAsync(machine.State));
             #endregion
 
         }

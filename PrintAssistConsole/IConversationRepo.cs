@@ -9,7 +9,7 @@ namespace PrintAssistConsole
     interface IConversationRepo
     {
         bool TryGetUserStateById(Int64 id, out ConversationState state);
-        bool AddConversation(Int64 id, Conversation user);
+        void AddConversation(Int64 id, Conversation conversation);
         Conversation GetConversationById(Int64 id);
     }
 }

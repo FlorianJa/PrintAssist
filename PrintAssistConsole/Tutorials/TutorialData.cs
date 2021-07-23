@@ -9,7 +9,7 @@ namespace PrintAssistConsole
     public interface ITutorialDataProvider
     {
         int GetMessageCount();
-        TutorialMessage GetMessage(int stepnumber);
+        Message GetMessage(int stepnumber);
     }
        
 }
