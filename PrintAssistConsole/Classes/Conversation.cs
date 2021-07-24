@@ -71,7 +71,9 @@ namespace PrintAssistConsole
             WorkTutorialCanceled,
             STLFileReceived,
             StartSlicing,
-            Cancel
+            Cancel,
+            SlicingCompletedWithoutPrintStart,
+            SlicingCompletedWithPrintStart
         }
 
         public Int64 Id { get; private set; }
@@ -142,19 +144,36 @@ namespace PrintAssistConsole
 
             machine.Configure(ConversationState.Slicing)
                 .OnEntryAsync(async () => await StartSlicingAsync())
+                .Permit(Trigger.SlicingCompletedWithoutPrintStart, ConversationState.Idle)
+                .Permit(Trigger.SlicingCompletedWithPrintStart, ConversationState.StartingPrint)
                 .Permit(Trigger.Cancel, ConversationState.Idle);
-                
+
+            machine.Configure(ConversationState.StartingPrint)
+               .OnEntryAsync(async () => await SendMessageAsync("Start Print Procedure"));
+
         }
 
         private async Task StartSlicingAsync()
         {
             this.slicingProcess = new SlicingProcess(Id, bot, selectedModel);
+            slicingProcess.SlicingProcessCompletedWithoutStartPrint += SlicingProcess_SlicingProcessCompleted;
+            slicingProcess.SlicingProcessCompletedWithStartPrint += SlicingProcess_SlicingProcessCompletedWithStartPrint;
             await slicingProcess.StartAsync();
+        }
+
+        private async void SlicingProcess_SlicingProcessCompletedWithStartPrint(object sender, string gcodeLink)
+        {
+            await machine.FireAsync(Trigger.SlicingCompletedWithPrintStart);
+        }
+
+        private async void SlicingProcess_SlicingProcessCompleted(object sender, EventArgs e)
+        {
+            await machine.FireAsync(Trigger.SlicingCompletedWithoutPrintStart);
         }
 
         private async Task AskForSlicingNowAsync()
         {
-            await SendMessageAsync("I got your model. Should I slice it for you now?", CustomKeyboards.NoYesKeyboard);
+            await SendMessageAsync("I got your model. Do you want to slice it now?", CustomKeyboards.NoYesKeyboard);
         }
 
         private async Task StartWorkflowTutorialAsync()

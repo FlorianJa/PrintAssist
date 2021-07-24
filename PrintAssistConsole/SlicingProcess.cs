@@ -36,6 +36,8 @@ namespace PrintAssistConsole
         BeginnerModeSummary,
         SlicingServiceCompleted,
         StartPrinting,
+        DontPrintAfterSclicing,
+        PrintAfterSclicing,
     }
 
     public class SlicingProcess
@@ -61,9 +63,13 @@ namespace PrintAssistConsole
         private readonly string modelPath;
         private readonly StateMachine<SlicingProcessState, Trigger> machine;
         private float layerHeight;
-        private int infillPercentage;
-        private bool support;
+        private int fillDensity;
+        private bool supportMaterial;
         private SlicingServiceClient slicingServiceClient;
+        private string gcodeFile;
+
+        public event EventHandler SlicingProcessCompletedWithoutStartPrint;
+        public event EventHandler<string> SlicingProcessCompletedWithStartPrint;
 
         public SlicingProcess(long chatId, ITelegramBotClient bot, string modelPath)
         {
@@ -99,12 +105,12 @@ namespace PrintAssistConsole
 
             machine.Configure(SlicingProcessState.ExpertModeInfill)
                 .OnEntryAsync(async () => await SendMessageAsync(machine.State))
-                .OnExitAsync(async () => await SendMessageAsync($"Infill = {infillPercentage}%"))
+                .OnExitAsync(async () => await SendMessageAsync($"Infill = {fillDensity}%"))
                 .Permit(Trigger.Next, SlicingProcessState.ExpertModeSupport);
 
             machine.Configure(SlicingProcessState.ExpertModeSupport)
                 .OnEntryAsync(async () => await SendMessageAsync(machine.State))
-                .OnExitAsync(async () => await SendMessageAsync($"Support = {support}"))
+                .OnExitAsync(async () => await SendMessageAsync($"Support = {supportMaterial}"))
                 .Permit(Trigger.Next, SlicingProcessState.SlicingServiceStarted);
 
             machine.Configure(SlicingProcessState.SlicingServiceStarted)
@@ -114,7 +120,16 @@ namespace PrintAssistConsole
 
             machine.Configure(SlicingProcessState.SlicingServiceCompleted)
                .OnEntryAsync(async () => { await SendMessageAsync(machine.State); })
+               .Permit(Trigger.No, SlicingProcessState.DontPrintAfterSclicing)
                .Permit(Trigger.Yes, SlicingProcessState.StartPrinting);
+
+            machine.Configure(SlicingProcessState.DontPrintAfterSclicing)
+               .OnEntryAsync(async () => { await SendMessageAsync(machine.State); SlicingProcessCompletedWithoutStartPrint?.Invoke(this, null); });
+
+            machine.Configure(SlicingProcessState.StartPrinting)
+               .OnEntry(() => SlicingProcessCompletedWithStartPrint?.Invoke(this, gcodeFile))
+               .Permit(Trigger.No, SlicingProcessState.DontPrintAfterSclicing)
+               .Permit(Trigger.Yes, SlicingProcessState.PrintAfterSclicing);
 
             machine.Configure(SlicingProcessState.BeginnerModeQuality)
                 //.OnEntryAsync(async () => ) 
@@ -145,11 +160,15 @@ namespace PrintAssistConsole
             slicingServiceClient.SlicingCompleted += SlicingServiceClient_SlicingCompleted;
             var tmp = PrusaSlicerCLICommands.Default;
             tmp.FileURI = modelPath;
+            tmp.LayerHeight = layerHeight;
+            tmp.SupportMaterial = supportMaterial;
+            tmp.FillDensity = fillDensity/100f;
             await slicingServiceClient.MakeRequest(tmp);
         }
 
-        private async void SlicingServiceClient_SlicingCompleted(object sender, string e)
+        private async void SlicingServiceClient_SlicingCompleted(object sender, string gcodeFileLink)
         {
+            gcodeFile = gcodeFileLink;
             await machine.FireAsync(Trigger.Next);
         }
 
@@ -317,9 +336,9 @@ namespace PrintAssistConsole
 
                         if (match.Success)
                         {
-                            infillPercentage = Int32.Parse(match.Value);
+                            fillDensity = Int32.Parse(match.Value);
 
-                            if (infillPercentage >= 0 && infillPercentage <= 100)
+                            if (fillDensity >= 0 && fillDensity <= 100)
                             {
                                 await machine.FireAsync(Trigger.Next);
                             }
@@ -341,12 +360,12 @@ namespace PrintAssistConsole
                         {
                             case TutorialYes:
                                 {
-                                    support = true;
+                                    supportMaterial = true;
                                     break;
                                 }
                             case TutorialNo:
                                 {
-                                    support = false;
+                                    supportMaterial = false;
                                     break;
                                 }
                             default:
@@ -374,6 +393,27 @@ namespace PrintAssistConsole
                     break;
                 case SlicingProcessState.BeginnerModeSummary:
                     break;
+                case SlicingProcessState.SlicingServiceCompleted:
+                    {
+                        var intent = await IntentDetector.Instance.CallDFAPIAsync(id, update.Message.Text, "TutorialStarten-followup"); //reuse the Yes No intents from the tutorial
+                        switch (intent)
+                        {
+                            case TutorialYes:
+                                {
+                                    await machine.FireAsync(Trigger.Yes);
+                                    break;
+                                }
+                            case TutorialNo:
+                                {
+                                    await machine.FireAsync(Trigger.No);
+                                    break;
+                                }
+                            default:
+                                break;
+                        }
+                        
+                        break;
+                    }
                 default:
                     break;
             }

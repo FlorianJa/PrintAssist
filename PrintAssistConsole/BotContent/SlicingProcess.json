@@ -1,69 +1,33 @@
 {
-	0:
-	{
+	0: {
 		"text": "Okay, in which mode do you want to slice the model?",
 		"KeyboardButtons": [ "Expert", "Beginner" ]
 	},
-	1:
-	{
+	1: {
 		"text": "Let's start slicing! How high should the layers be?",
 		"KeyboardButtons": [ "0,07 mm", "0,1 mm", "0,15 mm", "0,2 mm", "0,25 mm", "0,3 mm" ]
 	},
-	2:
-	{
+	2: {
 		"text": "How much infill do you want?",
-		"KeyboardButtons": [ "15%", "20%","25%","50%","75%","100%" ]
+		"KeyboardButtons": [ "15%", "20%", "25%", "50%", "75%", "100%" ]
 	},
-	3:
-	{
+	3: {
 		"text": "How much infill do you want?",
-		"KeyboardButtons": [ "15%", "20%","25%","50%","75%","100%" ]
+		"KeyboardButtons": [ "15%", "20%", "25%", "50%", "75%", "100%" ]
 	},
 	4: {
 		"text": "Do you need support structures?",
 		"KeyboardButtons": [ "Ja", "Nein" ]
 	},
-	5:
-	{
-		"text": "To save material and lower the printing time, 3D printed objects are often not solid but have so called infill. You can select different patterns and fill rate. A higher fill rate increases the stability but also the printing time.",
-		"photoFilePaths": [ ".\\BotContent\\images\\InfillPattern.png", ".\\BotContent\\images\\InfillPercentage.png" ],
-		"KeyboardButtons": [ "Erklärung abbrechen", "Weiter" ]
+	6: {
+		"text": "Okay, I will slice your model now. This might take a few seconds. Please stand by."
 	},
-	6:
-	{
-		"text": "Okay, I will slice your model now. This might take a few seconds. Please stand by.",
-	},
-	7:
-	{
-		"text": "You can do the slicing with a slicing software on your PC or you can send me your model and I will slice it for you.",
-		"KeyboardButtons": [ "Erklärung abbrechen", "Weiter" ]
-	},
-	8:
-	{
-		"text": "After the slicing process, the resulting machine code (gcode) file needs to be uploaded to the printer. If you sliced your model on your own, you can send the file to me and I upload it for you. Afterwards, I can start the print for you.",
-		"KeyboardButtons": [ "Erklärung abbrechen", "Weiter" ]
-	},
-	9:
-	{
-		"text": "Depending on the object size and the slicing parameter the print can take several hours.",
-		"KeyboardButtons": [ "Erklärung abbrechen", "Weiter" ]
-	},
-	10:
-	{
-		"text": "Normally, your print is ready to use after the printing process is finished. In some cases you need to do some post-processing like removing the support structures.",
-		"KeyboardButtons": [ "Erklärung abbrechen", "Weiter" ]
-	},
-	11:
-	{
-		"text": "This was a short overview of the 3D printing workflow. What can i do for you next?",
-	},
-	12: {
-		"text": "Ok."
-	},
-	"14": {
+	14: {
 		"text": "Slicing completed. Do you want to print it now?",
 		"KeyboardButtons": [ "Nein", "Ja" ]
+	},
+	16: {
+		"text": "Okay, I will store it for you. You can ask me later to start the print."
 	}
-
 
 }

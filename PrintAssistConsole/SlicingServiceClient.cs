@@ -18,6 +18,10 @@ namespace PrintAssistConsole
         /// The Websocket Client
         /// </summary>
         private ClientWebSocket webSocket { get; set; }
+        public List<string> AvailableProfiles { get; private set; }
+
+        private string selectedSlicingConfigFile;
+
         /// <summary>
         /// Defines if the WebsocketClient is listening and the Tread is running
         /// </summary>
@@ -101,6 +105,8 @@ namespace PrintAssistConsole
         {
             await StartWebsocketAsync();
 
+            prusaSlicerCLICommands.LoadConfigFile ??= "02Q.ini";
+
             var json = JsonConvert.SerializeObject(prusaSlicerCLICommands, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
             var tmp = Encoding.ASCII.GetBytes(json);
             await webSocket.SendAsync(new ArraySegment<byte>(tmp, 0, json.Length), WebSocketMessageType.Text, true, CancellationToken.None);
@@ -120,11 +126,11 @@ namespace PrintAssistConsole
                     SlicingCompleted(this, slicingCompletedMessage.Payload);
                 }
             }
-            //else if (_type == typeof(ProfileListMessage))
-            //{
-            //    AvailableProfiles = ((ProfileListMessage)JsonUtility.FromJson(data, _type)).Payload;
-            //    selectedSlicingConfigFile = AvailableProfiles[AvailableProfiles.Count - 1];
-            //}
+            else if (_type == typeof(ProfileListMessage))
+            {
+                AvailableProfiles = JsonConvert.DeserializeObject<ProfileListMessage>(data).Payload;
+                selectedSlicingConfigFile = AvailableProfiles[AvailableProfiles.Count - 1];
+            }
         }
 
         /// <summary>
