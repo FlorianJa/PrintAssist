@@ -1,4 +1,6 @@
 ﻿using Newtonsoft.Json;
+using PrintAssistConsole.Intents;
+using SlicingCLI;
 using Stateless;
 using System;
 using System.Collections.Generic;
@@ -24,7 +26,7 @@ namespace PrintAssistConsole
         ExpertModeInfill,
         ExpertModeSupport,
         ExpertModeAskToChangeOtherParameters,
-        AskToPrintNow,
+        SlicingServiceStarted,
         ExpertModeAskForParameterName,
         EndSlicingWithoutPrinting,
         EndSlicingWithPrinting,
@@ -32,6 +34,8 @@ namespace PrintAssistConsole
         BeginnerModeMechanicalForce,
         BeginnerModeOverhangs,
         BeginnerModeSummary,
+        SlicingServiceCompleted,
+        StartPrinting,
     }
 
     public class SlicingProcess
@@ -54,16 +58,19 @@ namespace PrintAssistConsole
         private readonly SlicingDialogDataProvider dialogData;
         private readonly ITelegramBotClient bot;
         private readonly long id;
+        private readonly string modelPath;
         private readonly StateMachine<SlicingProcessState, Trigger> machine;
         private float layerHeight;
         private int infillPercentage;
+        private bool support;
+        private SlicingServiceClient slicingServiceClient;
 
         public SlicingProcess(long chatId, ITelegramBotClient bot, string modelPath)
         {
             dialogData = new SlicingDialogDataProvider();
             this.bot = bot;
             this.id = chatId;
-
+            this.modelPath = modelPath;
             // Instantiate a new state machine in the Start state
             machine = new StateMachine<SlicingProcessState, Trigger>(SlicingProcessState.BeforeStart);
 
@@ -96,13 +103,18 @@ namespace PrintAssistConsole
                 .Permit(Trigger.Next, SlicingProcessState.ExpertModeSupport);
 
             machine.Configure(SlicingProcessState.ExpertModeSupport)
-                //.OnEntryAsync(async () => ) 
-                .Permit(Trigger.Next, SlicingProcessState.AskToPrintNow);
+                .OnEntryAsync(async () => await SendMessageAsync(machine.State))
+                .OnExitAsync(async () => await SendMessageAsync($"Support = {support}"))
+                .Permit(Trigger.Next, SlicingProcessState.SlicingServiceStarted);
 
-            machine.Configure(SlicingProcessState.AskToPrintNow)
-                //.OnEntryAsync(async () => ) 
-                .Permit(Trigger.No, SlicingProcessState.EndSlicingWithoutPrinting)
-                .Permit(Trigger.Yes, SlicingProcessState.EndSlicingWithPrinting);
+            machine.Configure(SlicingProcessState.SlicingServiceStarted)
+                .OnEntryAsync(async () => { await SendMessageAsync(machine.State); await CallSlicingService(); })
+                .Permit(Trigger.Next, SlicingProcessState.SlicingServiceCompleted);
+            //.Permit(Trigger.Yes, SlicingProcessState.EndSlicingWithPrinting);
+
+            machine.Configure(SlicingProcessState.SlicingServiceCompleted)
+               .OnEntryAsync(async () => { await SendMessageAsync(machine.State); })
+               .Permit(Trigger.Yes, SlicingProcessState.StartPrinting);
 
             machine.Configure(SlicingProcessState.BeginnerModeQuality)
                 //.OnEntryAsync(async () => ) 
@@ -122,9 +134,23 @@ namespace PrintAssistConsole
 
             machine.Configure(SlicingProcessState.BeginnerModeSummary)
                 //.OnEntryAsync(async () => ) 
-                .Permit(Trigger.Next, SlicingProcessState.AskToPrintNow);
+                .Permit(Trigger.Next, SlicingProcessState.SlicingServiceStarted);
 
             #endregion
+        }
+
+        private async Task CallSlicingService()
+        {
+            slicingServiceClient = new SlicingServiceClient("ws://localhost:5003/ws");
+            slicingServiceClient.SlicingCompleted += SlicingServiceClient_SlicingCompleted;
+            var tmp = PrusaSlicerCLICommands.Default;
+            tmp.FileURI = modelPath;
+            await slicingServiceClient.MakeRequest(tmp);
+        }
+
+        private async void SlicingServiceClient_SlicingCompleted(object sender, string e)
+        {
+            await machine.FireAsync(Trigger.Next);
         }
 
         public async Task StartAsync()
@@ -265,13 +291,18 @@ namespace PrintAssistConsole
                         if(match.Success)
                         {
                             layerHeight = float.Parse(match.Value);
-                            //check if value is in range
-
-                            await machine.FireAsync(Trigger.Next);
+                            if(layerHeight >= 0.05f && layerHeight <= 0.3f)
+                            {
+                                await machine.FireAsync(Trigger.Next);
+                            }
+                            else
+                            {
+                                await SendMessageAsync("Deine Eingabe nicht gültig. Die Layer Height muss zwischen 0,05 mm und 0.3 mm betragen.", CustomKeyboards.LayerHeightKeyboard);
+                            }
                         }
                         else
                         {
-                            await SendMessageAsync("Bitte wähle eine Layer Height aus der Auswahl unten aus oder gibt die Zahl in Millimeter ein.");
+                            await SendMessageAsync("Bitte wähle eine Layer Height aus der Auswahl unten aus oder gibt die Zahl in Millimeter ein.", CustomKeyboards.LayerHeightKeyboard);
                         }
 
                         break;
@@ -287,9 +318,15 @@ namespace PrintAssistConsole
                         if (match.Success)
                         {
                             infillPercentage = Int32.Parse(match.Value);
-                            //check if value is in range
 
-                            await machine.FireAsync(Trigger.Next);
+                            if (infillPercentage >= 0 && infillPercentage <= 100)
+                            {
+                                await machine.FireAsync(Trigger.Next);
+                            }
+                            else
+                            {
+                                await SendMessageAsync("Deine Eingabe nicht gültig. Das Infill muss zwischen 0% und 100% betragen.", CustomKeyboards.InfillKeyboard);
+                            }
                         }
                         else
                         {
@@ -298,10 +335,30 @@ namespace PrintAssistConsole
                         break;
                     }
                 case SlicingProcessState.ExpertModeSupport:
-                    break;
+                    {
+                        var intent = await IntentDetector.Instance.CallDFAPIAsync(id, update.Message.Text, "TutorialStarten-followup"); //reuse the Yes No intents from the tutorial
+                        switch (intent)
+                        {
+                            case TutorialYes:
+                                {
+                                    support = true;
+                                    break;
+                                }
+                            case TutorialNo:
+                                {
+                                    support = false;
+                                    break;
+                                }
+                            default:
+                                break;
+                        }
+                        await machine.FireAsync(Trigger.Next);
+
+                        break;
+                    }
                 case SlicingProcessState.ExpertModeAskToChangeOtherParameters:
                     break;
-                case SlicingProcessState.AskToPrintNow:
+                case SlicingProcessState.SlicingServiceStarted:
                     break;
                 case SlicingProcessState.ExpertModeAskForParameterName:
                     break;

@@ -35,7 +35,27 @@ namespace PrintAssistConsole
                             resizeKeyboard: true);
             }
         }
+
+        public static ReplyKeyboardMarkup LayerHeightKeyboard
+        {
+            get
+            {
+                return new ReplyKeyboardMarkup(
+                            new KeyboardButton[] { "0,07 mm", "0,1 mm", "0,15 mm", "0,2 mm", "0,25 mm", "0,3 mm" },
+                            resizeKeyboard: true);
+            }
+        }
+        public static ReplyKeyboardMarkup InfillKeyboard
+        {
+            get
+            {
+                return new ReplyKeyboardMarkup(
+                            new KeyboardButton[] { "15%", "20%", "25%", "50%", "75%", "100%" },
+                            resizeKeyboard: true);
+            }
+        }
         
+
     }
 
     public class Conversation
@@ -203,7 +223,7 @@ namespace PrintAssistConsole
 
                                 if (Path.GetExtension(update.Message.Document.FileName) == ".stl")
                                 {
-                                    selectedModel = path; // this should be done after the user confirmed to slice the file now.
+                                    selectedModel = Path.GetFullPath(path); // this should be done after the user confirmed to slice the file now.
                                     await machine.FireAsync(Trigger.STLFileReceived);
                                 }
                                 else if (Path.GetExtension(update.Message.Document.FileName) == ".gcode")

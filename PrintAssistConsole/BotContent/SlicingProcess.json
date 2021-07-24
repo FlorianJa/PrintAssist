@@ -19,11 +19,9 @@
 		"text": "How much infill do you want?",
 		"KeyboardButtons": [ "15%", "20%","25%","50%","75%","100%" ]
 	},
-	4:
-	{
-		"text": "The quality of the surface is mainly influenced by the layer height. The thinner the layer, the smoother the surface. This printer can print between 0.07 mm and 0.3 mm layer height.",
-		"photoFilePaths": [ ".\\BotContent\\images\\LayerHeights.png", ".\\BotContent\\images\\0.05mmLayer.png", ".\\BotContent\\images\\0.2mmLayer.png", ".\\BotContent\\images\\0.3mmLayer.png" ],
-		"KeyboardButtons": [ "Erklärung abbrechen", "Weiter" ]
+	4: {
+		"text": "Do you need support structures?",
+		"KeyboardButtons": [ "Ja", "Nein" ]
 	},
 	5:
 	{
@@ -33,9 +31,7 @@
 	},
 	6:
 	{
-		"text": "Since we cannot print into air, we need to add so called support structures to objects with overhangs. Support structures is additional material wich needs to be removed after the print.",
-		"photoFilePaths": [ ".\\BotContent\\images\\Overhangs.jpg" ],
-		"KeyboardButtons": [ "Erklärung abbrechen", "Weiter" ]
+		"text": "Okay, I will slice your model now. This might take a few seconds. Please stand by.",
 	},
 	7:
 	{
@@ -61,8 +57,13 @@
 	{
 		"text": "This was a short overview of the 3D printing workflow. What can i do for you next?",
 	},
-	12:
-	{
+	12: {
 		"text": "Ok."
+	},
+	"14": {
+		"text": "Slicing completed. Do you want to print it now?",
+		"KeyboardButtons": [ "Nein", "Ja" ]
 	}
+
+
 }
