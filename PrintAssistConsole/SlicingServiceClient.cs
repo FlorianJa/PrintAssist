@@ -6,11 +6,25 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.WebSockets;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace PrintAssistConsole
 {
+
+    public class SlicingCompletedEventArgs: EventArgs
+    {
+        public string GcodeLink { get; private set; }
+        public TimeSpan? PrintDuration { get; private set; }
+        public float UsedFilament { get; private set; }
+        public SlicingCompletedEventArgs(string link, TimeSpan printDuration, float usedFilament)
+        {
+            GcodeLink = link;
+            PrintDuration = printDuration;
+            UsedFilament = usedFilament;
+        }
+    }
     public class SlicingServiceClient
     {
 
@@ -35,7 +49,7 @@ namespace PrintAssistConsole
         private string websocketURI;
 
 
-        public event EventHandler<string> SlicingCompleted;
+        public event EventHandler<SlicingCompletedEventArgs> SlicingCompleted;
 
         public SlicingServiceClient(string websocketUri)
         {
@@ -116,15 +130,29 @@ namespace PrintAssistConsole
         private void ParseWebsocketData(string data)
         {
             var _type = GetMessageType(data);
-            if (_type == typeof(GCodeAPILink))
+            if (_type == typeof(FileSlicedMessage))
             {
-                var slicingCompletedMessage = JsonConvert.DeserializeObject<GCodeAPILink>(data);
+                try
+                {
+                    var slicingCompletedMessage = JsonConvert.DeserializeObject<FileSlicedMessage>(data);
+                    var timespan = new TimeSpan(slicingCompletedMessage.Payload.Days, slicingCompletedMessage.Payload.Hours, slicingCompletedMessage.Payload.Minutes, 0);
+                    if (SlicingCompleted != null)
+                    {
+                        SlicingCompleted(this, new SlicingCompletedEventArgs(slicingCompletedMessage.Payload.SlicedFilePath, timespan, slicingCompletedMessage.Payload.UsedFilament));
+                    }
+
+                }
+                catch (Exception ex)
+                {
+
+                    throw;
+                }
                 listening = false;
 
-                if(SlicingCompleted != null)
-                {
-                    SlicingCompleted(this, slicingCompletedMessage.Payload);
-                }
+                //if (SlicingCompleted != null)
+                //{
+                //    SlicingCompleted(this, new SlicingCompletedEventArgs(slicingCompletedMessage.Payload.SlicedFilePath, slicingCompletedMessage.Payload.PrintDuration, slicingCompletedMessage.Payload.UsedFilament));
+                //}
             }
             else if (_type == typeof(ProfileListMessage))
             {
@@ -147,8 +175,7 @@ namespace PrintAssistConsole
 
             return type switch
             {
-                "FileSliced" => typeof(FileSlicedMessage),
-                "GCodeAPILink" => typeof(GCodeAPILink),
+                "SlicingCompleted" => typeof(FileSlicedMessage),
                 "Profiles" => typeof(ProfileListMessage),
                 _ => null,
             };

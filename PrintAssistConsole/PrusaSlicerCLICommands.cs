@@ -11,7 +11,7 @@ namespace SlicingCLI
 {
     public class PrusaSlicerCLICommands
     {
-        public static PrusaSlicerCLICommands Default { get { return new PrusaSlicerCLICommands() { ExportGCode = true, SupportMaterial = false, LayerHeight = 0.2f, FillDensity = 0.5f, GcodeComments = true, Loglevel = 3, FillPattern = "line" }; } }
+        public static PrusaSlicerCLICommands Default { get { return new PrusaSlicerCLICommands() { ExportGCode = true, SupportMaterial = false, LayerHeight = 0.2f, FillDensity = 0.5f, GcodeComments = true, Loglevel = 3, FillPattern = "rectilinear" }; } }
 
         #region File location
 

@@ -17,18 +17,25 @@ namespace Assets._ExtendedPrinter.Scripts.SlicingService
     public class FileSlicedMessage
     {
         public string MessageType;
-        public FileSlicedMessageArgs Payload;// { get; set; }
+        public FileSlicedArgs Payload;// { get; set; }
     }
 
-    public class GCodeAPILink
+    public class FileSlicedArgs
     {
-        public string MessageType;
-        public string Payload;// { get; set; }
+        public string SlicedFilePath;
+        public int Days;
+        public int Hours;
+        public int Minutes;
+        public float UsedFilament;
+        public bool Success;
     }
+
 
     public class ProfileListMessage 
     {
         public string MessageType;
         public List<string> Payload;
     }
+
+
 }
