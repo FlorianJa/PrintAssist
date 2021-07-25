@@ -12,7 +12,7 @@ namespace PrintAssistConsole
         public string Text { get; set; }
         public List<string> PhotoFilePaths { get; set; }
         public List<string> VideoFilePaths { get; set; }
-        public List<string> KeyboardButtons { get; set; }
+        public List<List<string>> KeyboardButtons { get; set; }
 
         public IReplyMarkup ReplyKeyboardMarkup
         {
@@ -21,13 +21,19 @@ namespace PrintAssistConsole
                 if (KeyboardButtons != null && KeyboardButtons.Count > 0)
                 {
                     var keyboard = new ReplyKeyboardMarkup();
-                    var buttons = new List<KeyboardButton>();
-                    foreach (var name in KeyboardButtons)
+                    var keyboardButtons = new List<List<KeyboardButton>>();
+
+                    foreach (var row in KeyboardButtons)
                     {
-                        buttons.Add(new KeyboardButton(name));
+                        var rowButtons = new List<KeyboardButton>();
+                        foreach (var name in row)
+                        {
+                            rowButtons.Add(new KeyboardButton(name));
+                        }
+                        keyboardButtons.Add(rowButtons);
                     }
 
-                    keyboard.Keyboard = new List<List<KeyboardButton>> { buttons };
+                    keyboard.Keyboard = keyboardButtons;
                     keyboard.ResizeKeyboard = true;
                     return keyboard;
                 }
@@ -39,7 +45,7 @@ namespace PrintAssistConsole
         }
 
 
-        public Message(string text = null, List<string> photoFilePath = null, List<string> videoFilePath = null, List<string> keyboardButtons = null)
+        public Message(string text = null, List<string> photoFilePath = null, List<string> videoFilePath = null, List<List<string>> keyboardButtons = null)
         {
             Text = text;
             PhotoFilePaths = photoFilePath;

@@ -1,49 +1,49 @@
 {
 	0: {
 		"text": "Okay, in which mode do you want to slice the model?",
-		"KeyboardButtons": [ "Expert", "Beginner" ]
+		"KeyboardButtons": [ [ "Expert", "Beginner" ] ]
 	},
 	1: {
 		"text": "Let's start slicing! How thick should the layers be?",
-		"KeyboardButtons": [ "0,07 mm", "0,1 mm", "0,15 mm", "0,2 mm", "0,25 mm", "0,3 mm" ]
+		"KeyboardButtons": [ [ "0,07 mm", "0,1 mm", "0,15 mm", "0,2 mm", "0,25 mm", "0,3 mm" ] ]
 	},
 	3: {
 		"text": "How much infill do you want?",
-		"KeyboardButtons": [ "15%", "20%", "25%", "50%", "75%", "100%" ]
+		"KeyboardButtons": [ [ "15%", "20%", "25%", "50%", "75%", "100%" ] ]
 	},
 	4: {
 		"text": "Do you need support structures?",
-		"KeyboardButtons": [ "Ja", "Nein" ]
+		"KeyboardButtons": [ [ "Ja", "Nein" ] ]
 	},
 	6: {
 		"text": "Okay, I will slice your model now. This might take a few seconds. Please stand by."
 	},
 	14: {
 		"text": "Do you want to print it now?",
-		"KeyboardButtons": [ "Nein", "Ja" ]
+		"KeyboardButtons": [ [ "Nein", "Ja" ] ]
 	},
 	16: {
 		"text": "Okay, I will store it for you. You can ask me later to start the print."
 	},
 	2: {
 		"text": "Okay, let's start. Is this a test print, like an early prototyp?",
-		"KeyboardButtons": [ "Nein", "Ja" ]
+		"KeyboardButtons": [ [ "Nein", "Ja" ] ]
 	},
 	10: {
 		"text": "Got it. Do you want to have a smooth surface?",
-		"KeyboardButtons": [ "Nein", "Ja" ]
+		"KeyboardButtons": [ [ "Nein", "Ja" ] ]
 	},
 	11: {
 		"text": "Does the object need to handle mechanical forces?",
-		"KeyboardButtons": [ "Nein", "Ja" ]
+		"KeyboardButtons": [ [ "Nein", "Ja" ] ]
 	},
 	12: {
 		"text": "Does the object have overhangs?",
-		"KeyboardButtons": [ "Nein", "Ja" ]
+		"KeyboardButtons": [ [ "Nein", "Ja" ] ]
 	},
 	18: {
 		"text": "Does the object have fine details which need to be printed carefully?",
-		"KeyboardButtons": [ "Nein", "Ja" ]
+		"KeyboardButtons": [ [ "Nein", "Ja" ] ]
 	}
 
 }

@@ -1,0 +1,47 @@
+{
+	0: {
+		"text": "Before I can start the print, you need to check a few things for me.",
+		"KeyboardButtons": [[ "Abbruch", "Okay" ]]
+	},
+
+	1: {
+		"text": "Please make sure that the buildplate is empty and clean.",
+		"KeyboardButtons": [
+			[ "Abbruch", "Hilfe" ],
+			[ "Buildplate is empty and clean" ]
+		]
+	},
+
+	3: {
+		"text": "Check if FILAMENT TYPE is loaded and that there are around XXX meters on the spool.",
+		"KeyboardButtons": [[ "Abbruch", "Hilfe", "Filament is bereit" ]]
+	},
+
+	6: {
+		"text": "We are ready to print. The print will take around XX hours. Do you want to start the print now?",
+		"KeyboardButtons": [[ "Abbruch", "Print now" ]]
+	},
+	10: {
+		"text": "The printer now heats up and starts printing soon. During the print, you can ask me about the print progress. When the print is finished I will notify you."
+	},
+	4: {
+		"text": "Take the buildplate from the printer and bend it gently like in the video. Remove all printed parts and clean it with XXX. Afterwards put the buildplate back on the printer.",
+		"KeyboardButtons": [[ "Abbruch", "Back to the print procedrue" ]]
+	},
+	5: {
+		"text": "There should be a sticker on the spool with the information about the filament. It should be FILAMENT TYPE. One winding one the spool is between 30cm and 40cm. You need at least XX windings.",
+		"KeyboardButtons": [[ "Abbruch", "Filament is not ok", "Filament is ok" ]]
+	},
+	7: {
+		"text": "You need to change the filament. Do you need help with this?",
+		"KeyboardButtons": [[ "Abbruch", "No", "Yes, I need help" ]]
+	},
+	9: {
+		"text": "Start Change Filament Guide. (not implemented yet)",
+		"KeyboardButtons": [[ "Abbruch", "Back to the print procedrue" ]]
+	},
+	8: {
+		"text": "Okay, just tell me when you changed the filament.",
+		"KeyboardButtons": [[ "Abbruch", "I changed the filament" ]]
+	}
+}
