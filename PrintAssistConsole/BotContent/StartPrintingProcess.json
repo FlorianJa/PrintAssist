@@ -14,9 +14,12 @@
 
 	3: {
 		"text": "Check if FILAMENT TYPE is loaded and that there are around XXX meters on the spool.",
-		"KeyboardButtons": [[ "Abbruch", "Hilfe", "Filament is bereit" ]]
+		"KeyboardButtons": [
+			[ "Abbruch", "Hilfe" ],
+			[ "Wrong filament type or too less material on sppol" ],
+			[ "Filament is ready" ]
+			]
 	},
-
 	6: {
 		"text": "We are ready to print. The print will take around XX hours. Do you want to start the print now?",
 		"KeyboardButtons": [[ "Abbruch", "Print now" ]]

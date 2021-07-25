@@ -81,6 +81,7 @@ namespace PrintAssistConsole
         private Tutorial tutorial;
         private SlicingProcess slicingProcess;
         private string selectedModel;
+        private StartPrintProcess startPrintProcess;
         private readonly StateMachine<ConversationState, Trigger> machine;
         protected readonly ITelegramBotClient bot;
 
@@ -149,14 +150,20 @@ namespace PrintAssistConsole
                 .Permit(Trigger.Cancel, ConversationState.Idle);
 
             machine.Configure(ConversationState.StartingPrint)
-               .OnEntryAsync(async () => await SendMessageAsync("Start Print Procedure"));
+               .OnEntryAsync(async () => await StartStartPrintProcessAsync());
 
+        }
+
+        private async Task StartStartPrintProcessAsync()
+        {
+            this.startPrintProcess = new StartPrintProcess(Id, bot);
+            await startPrintProcess.StartAsync();
         }
 
         private async Task StartSlicingAsync()
         {
             this.slicingProcess = new SlicingProcess(Id, bot, selectedModel);
-            slicingProcess.SlicingProcessCompletedWithoutStartPrint += SlicingProcess_SlicingProcessCompleted;
+            slicingProcess.SlicingProcessCompletedWithoutStartPrint += SlicingProcess_SlicingProcessWithoutCompleted;
             slicingProcess.SlicingProcessCompletedWithStartPrint += SlicingProcess_SlicingProcessCompletedWithStartPrint;
             await slicingProcess.StartAsync();
         }
@@ -166,7 +173,7 @@ namespace PrintAssistConsole
             await machine.FireAsync(Trigger.SlicingCompletedWithPrintStart);
         }
 
-        private async void SlicingProcess_SlicingProcessCompleted(object sender, EventArgs e)
+        private async void SlicingProcess_SlicingProcessWithoutCompleted(object sender, EventArgs e)
         {
             await machine.FireAsync(Trigger.SlicingCompletedWithoutPrintStart);
         }
@@ -358,7 +365,10 @@ namespace PrintAssistConsole
                             break;
                         }
                     case ConversationState.StartingPrint:
-                        break;
+                        {
+                            await startPrintProcess.HandleInputAsync(update);
+                            break;
+                        }
                     case ConversationState.STLFileReceived:
                         {
                             var intent = await IntentDetector.Instance.CallDFAPIAsync(Id, update.Message.Text, "TutorialStarten-followup"); //reuse the Yes No intents from the tutorial
