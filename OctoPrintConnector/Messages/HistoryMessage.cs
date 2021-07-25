@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace OctoPrintLib
+namespace OctoPrintConnector.Messages
 {
     public class HistoryMessage
     {

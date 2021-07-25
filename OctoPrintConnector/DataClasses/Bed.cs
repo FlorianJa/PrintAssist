@@ -1,4 +1,4 @@
-﻿namespace OctoPrintLib
+﻿namespace OctoPrintConnector
 {
     public class Bed
     {

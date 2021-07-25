@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Text.Json.Serialization;
 
-namespace OctoPrintLib.Messages
+namespace OctoPrintConnector.Messages
 {
     public class Payload
     {
