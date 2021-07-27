@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using Google.Protobuf.Collections;
+using Newtonsoft.Json;
 using PrintAssistConsole.Intents;
 using Stateless;
 using System;
@@ -51,7 +52,7 @@ namespace PrintAssistConsole
         private ITelegramBotClient bot;
         private long id;
         private StateMachine<StartPrintProcessState, Trigger> machine;
-        private string dfContext = "StartPrint-followup";
+        private List<string> dfContexts = new List<string>() { "startprint-followup" };
 
         public event EventHandler PrintStarted;
         public event EventHandler StartPrintCanceled;
@@ -91,10 +92,10 @@ namespace PrintAssistConsole
             machine.Configure(StartPrintProcessState.AskToStartAgain)
                 .OnEntryAsync(async () => await SendMessageAsync(machine.State))
                 .Permit(Trigger.Cancel, StartPrintProcessState.Canceled)
-                .Permit(Trigger.StartPrint, StartPrintProcessState.CheckFilament);
+                .Permit(Trigger.StartPrint, StartPrintProcessState.PrintStarting);
 
             machine.Configure(StartPrintProcessState.PrintStarting)
-                .OnEntryAsync(async () => await SendMessageAsync(machine.State));
+                .OnEntryAsync(async () => { await SendMessageAsync(machine.State); PrintStarted?.Invoke(this, null); });
 
             machine.Configure(StartPrintProcessState.ShowRemoveHelp)
                 .OnEntryAsync(async () => await SendMessageAsync(machine.State))
@@ -129,8 +130,11 @@ namespace PrintAssistConsole
 
         public async Task HandleInputAsync(Update update)
         {
-            var intent = await IntentDetector.Instance.CallDFAPIAsync(id, update.Message.Text, dfContext); //reuse the Yes No intents from the tutorial
-            dfContext = ((BaseIntent)intent).response.QueryResult.OutputContexts[0].ContextName.ContextId;
+            var intent = await IntentDetector.Instance.CallDFAPIAsync(id, update.Message.Text, dfContexts, true);
+
+            var outputContexts = ((BaseIntent)intent).response.QueryResult.OutputContexts;
+
+            SetDFContext(outputContexts);
 
             switch (machine.State)
             {
@@ -140,12 +144,12 @@ namespace PrintAssistConsole
                     {
                         switch (intent)
                         {
-                            case TutorialNext:
+                            case CheckUpNext:
                                 {
                                     await machine.FireAsync(Trigger.Okay);
                                     break;
                                 }
-                            case TutorialCancel:
+                            case CheckUpCancel:
                                 {
                                     await machine.FireAsync(Trigger.Cancel);
                                     break;
@@ -160,17 +164,17 @@ namespace PrintAssistConsole
                         //var intent = await IntentDetector.Instance.CallDFAPIAsync(id, update.Message.Text, "CheckUpNext-followup"); //reuse the Yes No intents from the tutorial
                         switch (intent)
                         {
-                            case TutorialNext:
+                            case CheckBuildplateNext:
                                 {
-                                    await machine.FireAsync(Trigger.Okay);
+                                    await machine.FireAsync(Trigger.Next);
                                     break;
                                 }
-                            case TutorialCancel:
+                            case CheckBuildplateCancel:
                                 {
                                     await machine.FireAsync(Trigger.Cancel);
                                     break;
                                 }
-                            case Help:
+                            case CheckBuildplateHelp:
                                 {
                                     await machine.FireAsync(Trigger.Help);
                                     break;
@@ -183,32 +187,50 @@ namespace PrintAssistConsole
                 case StartPrintProcessState.Canceled:
                     break;
                 case StartPrintProcessState.CheckFilament:
-                { 
-                    //var intent = await IntentDetector.Instance.CallDFAPIAsync(id, update.Message.Text); //reuse the Yes No intents from the tutorial
-                    switch (intent)
                     {
-                        case TutorialNext:
-                            {
-                                await machine.FireAsync(Trigger.Next);
+                        //var intent = await IntentDetector.Instance.CallDFAPIAsync(id, update.Message.Text); //reuse the Yes No intents from the tutorial
+                        switch (intent)
+                        {
+                            case CheckFilamentNext:
+                                {
+                                    await machine.FireAsync(Trigger.Next);
+                                    break;
+                                }
+                            case CheckFilamentNotOk:
+                                {
+                                    await machine.FireAsync(Trigger.Next);
+                                    break;
+                                }
+                            case TutorialCancel:
+                                {
+                                    await machine.FireAsync(Trigger.Cancel);
+                                    break;
+                                }
+                            case CheckFilamentHelp:
+                                {
+                                    await machine.FireAsync(Trigger.Help);
+                                    break;
+                                }
+                            default:
                                 break;
-                            }
-                        case TutorialCancel:
-                            {
-                                await machine.FireAsync(Trigger.Cancel);
-                                break;
-                            }
-                        case Help:
-                            {
-                                await machine.FireAsync(Trigger.Help);
-                                break;
-                            }
-                        default:
-                            break;
+                        }
+                        break;
                     }
-                    break;
-                }
                 case StartPrintProcessState.ShowRemoveHelp:
-                    break;
+                    {
+                        //var intent = await IntentDetector.Instance.CallDFAPIAsync(id, update.Message.Text, "CheckUpNext-followup"); //reuse the Yes No intents from the tutorial
+                        switch (intent)
+                        {
+                            case CheckBuildplateNext:
+                                {
+                                    await machine.FireAsync(Trigger.Next);
+                                    break;
+                                }
+                            default:
+                                break;
+                        }
+                        break;
+                    }
                 case StartPrintProcessState.ShowFilamentHelp:
                     break;
                 case StartPrintProcessState.AskToStartAgain:
@@ -216,12 +238,12 @@ namespace PrintAssistConsole
                         //var intent = await IntentDetector.Instance.CallDFAPIAsync(id, update.Message.Text); //reuse the Yes No intents from the tutorial
                         switch (intent)
                         {
-                            case TutorialYes:
+                            case PrintNowYes:
                                 {
-                                    await machine.FireAsync(Trigger.Next);
+                                    await machine.FireAsync(Trigger.StartPrint);
                                     break;
                                 }
-                            case TutorialNo:
+                            case PrintNowNo:
                                 {
                                     await machine.FireAsync(Trigger.Cancel);
                                     break;
@@ -241,6 +263,37 @@ namespace PrintAssistConsole
                     break;
                 default:
                     break;
+            }
+        }
+
+        private void SetDFContext(RepeatedField<Google.Cloud.Dialogflow.V2.Context> outputContexts)
+        {
+            if (outputContexts.Count == 1 && dfContexts.Count == 1)
+            {
+                if (outputContexts[0].ContextName.ContextId == dfContexts[0])
+                {
+                    return;
+                }
+                else
+                {
+                    dfContexts.Clear();
+                    dfContexts.Add(outputContexts[0].ContextName.ContextId);
+                }
+            }
+            else
+            {
+                foreach (var outputContext in outputContexts)
+                {
+                    var contextName = outputContext.ContextName.ContextId.ToLower();
+                    if (dfContexts.Contains(contextName))
+                    {
+                        dfContexts.Remove(contextName);
+                    }
+                    else
+                    {
+                        dfContexts.Add(contextName);
+                    }
+                }
             }
         }
 

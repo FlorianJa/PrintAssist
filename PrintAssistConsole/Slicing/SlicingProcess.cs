@@ -224,15 +224,15 @@ namespace PrintAssistConsole
             if(isPrototype)
             {
                 message = "Layer height = 0.3mm" + Environment.NewLine;
-                message = $"Infill density = {cliCommands.FillDensity}" + Environment.NewLine;
+                message += $"Infill density = {cliCommands.FillDensity}" + Environment.NewLine;
                 message += "Support is";
                 message += objectHasOverhangs ? "enabled.": "disabled.";
             }
             else
             {
                 message = $"Layer height = {cliCommands.LayerHeight}" + Environment.NewLine;
-                message = $"Infill density = {cliCommands.FillDensity}" + Environment.NewLine;
-                message = $"Support is = ";
+                message += $"Infill density = {cliCommands.FillDensity}" + Environment.NewLine;
+                message += $"Support is = ";
                 message += (bool)cliCommands.SupportMaterial ? "enabled." : "disabled.";
             }
             await SendMessageAsync(message);

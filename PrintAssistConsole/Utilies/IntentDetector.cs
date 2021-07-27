@@ -47,8 +47,19 @@ namespace PrintAssistConsole
             await SetupIntentMappingAsync();
         }
 
+        public async Task<object> CallDFAPIAsync(long sessionId, string message)
+        {
+            return await CallDFAPIAsync(sessionId, message, contextName: null) ;
+        }
 
-        public async Task<object> CallDFAPIAsync(long sessionId, string message, string contextName = null, bool clearContext = true)
+        public async Task<object> CallDFAPIAsync(long sessionId, string message, string contextName, bool clearContext = false)
+        {
+            var tmp = new List<string>() { contextName };
+
+            return await CallDFAPIAsync(sessionId, message, tmp, clearContext);
+        }
+
+        public async Task<object> CallDFAPIAsync(long sessionId, string message, List<string> contextNames, bool clearContext = false)
         {
             
             var query = new QueryInput
@@ -67,14 +78,19 @@ namespace PrintAssistConsole
                 QueryParams = new QueryParameters()
             };
 
-            if (contextName != null)
+            request.QueryParams.ResetContexts = clearContext;
+
+            if (contextNames != null)
             {
-                var context = new Context
+                foreach (var contextName in contextNames)
                 {
-                    ContextName = new ContextName(_agentId, sessionId.ToString(), contextName),
-                    LifespanCount = 3,
-                };
-                request.QueryParams.Contexts.Add(context);
+                    var context = new Context
+                    {
+                        ContextName = new ContextName(_agentId, sessionId.ToString(), contextName),
+                        LifespanCount = 3,
+                    };
+                    request.QueryParams.Contexts.Add(context);
+                }
             }
             else
             {

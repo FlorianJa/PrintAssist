@@ -73,7 +73,8 @@ namespace PrintAssistConsole
             StartSlicing,
             Cancel,
             SlicingCompletedWithoutPrintStart,
-            SlicingCompletedWithPrintStart
+            SlicingCompletedWithPrintStart,
+            PrintStarted
         }
 
         public Int64 Id { get; private set; }
@@ -119,7 +120,8 @@ namespace PrintAssistConsole
 
             machine.Configure(ConversationState.EnteringNamen)
                 .OnExitAsync(async () => await SendGreetingWithNameAsync())
-                .Permit(Trigger.NameEntered, ConversationState.Idle);
+                .Permit(Trigger.NameEntered, ConversationState.StartingPrint);
+                //.Permit(Trigger.NameEntered, ConversationState.Idle);
 
             machine.Configure(ConversationState.Idle)
                 .OnEntryAsync(async () => await SendMessageAsync("What can i do for you?"))
@@ -150,14 +152,24 @@ namespace PrintAssistConsole
                 .Permit(Trigger.Cancel, ConversationState.Idle);
 
             machine.Configure(ConversationState.StartingPrint)
-               .OnEntryAsync(async () => await StartStartPrintProcessAsync());
+               .OnEntryAsync(async () => await StartStartPrintProcessAsync())
+               .Permit(Trigger.PrintStarted, ConversationState.Printing);
+
+            machine.Configure(ConversationState.Printing)
+               .OnEntryAsync(async () => await SendMessageAsync("PRINT STARTED"));
 
         }
 
         private async Task StartStartPrintProcessAsync()
         {
             this.startPrintProcess = new StartPrintProcess(Id, bot);
+            startPrintProcess.PrintStarted += StartPrintProcess_PrintStarted;
             await startPrintProcess.StartAsync();
+        }
+
+        private async void StartPrintProcess_PrintStarted(object sender, EventArgs e)
+        {
+            await machine.FireAsync(Trigger.PrintStarted);
         }
 
         private async Task StartSlicingAsync()

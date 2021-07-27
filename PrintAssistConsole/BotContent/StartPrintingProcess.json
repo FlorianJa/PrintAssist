@@ -1,39 +1,39 @@
 {
 	0: {
 		"text": "Before I can start the print, you need to check a few things for me.",
-		"KeyboardButtons": [[ "Abbruch", "Okay" ]]
+		"KeyboardButtons": [[ "Druckstart abbrechen", "Okay" ]]
 	},
 
 	1: {
-		"text": "Please make sure that the buildplate is empty and clean.",
+		"text": "Is the buidlplate empty and clean?",
 		"KeyboardButtons": [
-			[ "Abbruch", "Hilfe" ],
-			[ "Buildplate is empty and clean" ]
+			[ "Druckstart abbrechen", "Hilfe" ],
+			[ "Ja, Buildplate ist leer und sauber" ]
 		]
 	},
 
 	3: {
-		"text": "Check if FILAMENT TYPE is loaded and that there are around XXX meters on the spool.",
+		"text": "Is FILAMENT TYPE loaded and is enough material on the spool?",
 		"KeyboardButtons": [
-			[ "Abbruch", "Hilfe" ],
-			[ "Wrong filament type or too less material on sppol" ],
-			[ "Filament is ready" ]
+			[ "Druckstart abbrechen", "Hilfe" ],
+			[ "Nein, falsches Material geladen oder zu wenig Material auf der Spule" ],
+			[ "Ja, Filament ist bereit" ]
 			]
 	},
 	6: {
 		"text": "We are ready to print. The print will take around XX hours. Do you want to start the print now?",
-		"KeyboardButtons": [[ "Abbruch", "Print now" ]]
+		"KeyboardButtons": [[ "Druckstart abbrechen", "Druck jetzt starten" ]]
 	},
 	10: {
 		"text": "The printer now heats up and starts printing soon. During the print, you can ask me about the print progress. When the print is finished I will notify you."
 	},
 	4: {
 		"text": "Take the buildplate from the printer and bend it gently like in the video. Remove all printed parts and clean it with XXX. Afterwards put the buildplate back on the printer.",
-		"KeyboardButtons": [[ "Abbruch", "Back to the print procedrue" ]]
+		"KeyboardButtons": [[ "Druckstart abbrechen", "Buildplate ist leer und sauber" ]]
 	},
 	5: {
 		"text": "There should be a sticker on the spool with the information about the filament. It should be FILAMENT TYPE. One winding one the spool is between 30cm and 40cm. You need at least XX windings.",
-		"KeyboardButtons": [[ "Abbruch", "Filament is not ok", "Filament is ok" ]]
+		"KeyboardButtons": [[ "Abbruch", "Filament ist nicht bereit", "Filament ist bereit" ]]
 	},
 	7: {
 		"text": "You need to change the filament. Do you need help with this?",

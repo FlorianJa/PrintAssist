@@ -119,7 +119,7 @@ namespace PrintAssistConsole
         {
             await StartWebsocketAsync();
 
-            prusaSlicerCLICommands.LoadConfigFile ??= "02Q.ini";
+            prusaSlicerCLICommands.LoadConfigFile ??= "0.2Q.ini";
 
             var json = JsonConvert.SerializeObject(prusaSlicerCLICommands, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
             var tmp = Encoding.ASCII.GetBytes(json);

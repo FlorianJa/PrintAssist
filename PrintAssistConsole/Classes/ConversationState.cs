@@ -16,6 +16,7 @@ namespace PrintAssistConsole
         Slicing,
         StartingPrint,
         Unknown,
-        STLFileReceived
+        STLFileReceived,
+        Printing
     }
 }

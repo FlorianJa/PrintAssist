@@ -10,7 +10,7 @@ namespace PrintAssistConsole.Intents
     public abstract class BaseIntent
     {
         public DetectIntentResponse response;
-
+        //public string OutputContext;
         public abstract string Process(); 
     }
 }
