@@ -38,8 +38,11 @@ namespace PrintAssistConsole
 
 
         private List<string> dfContexts = new List<string>() { "startprintprocedure" };
-        private List<string> imageUris;
+        private Things things;
         private int selectedImage;
+        private int pageCount = 10;
+        private int currentSearchPage = 1;
+        private string serachTerm;
 
         public SearchModelDialog(long chatId, ITelegramBotClient bot)
         {
@@ -65,25 +68,16 @@ namespace PrintAssistConsole
         {
             if (machine.State == SearchModelState.Start)
             {
-                imageUris = await ThingiverseAPIWrapper.SearchThingsAsync(update.Message.Text);
-                selectedImage = 0;
-                var inlineKeyboard = new InlineKeyboardMarkup(new[]
+                serachTerm = update.Message.Text;
+                await SendMessageAsync($"Ok, ich suche nach: *{serachTerm}*", ParseMode.Markdown);
+
+                things = await ThingiverseAPIWrapper.SearchThingsAsync(update.Message.Text,currentSearchPage, pageCount);
+                if(things != null)
                 {
-                    // first row
-                    new []
-                    {
-                        InlineKeyboardButton.WithCallbackData("<", "<"),
-                        InlineKeyboardButton.WithCallbackData("Auswählen", "select"),
-                        InlineKeyboardButton.WithCallbackData(">", ">")
-                    }
-                });
-
-
-                //foreach (var uri in tmp)
-                //{
-                //    Console.WriteLine(uri);
-                await bot.SendPhotoAsync(chatId: id, photo: new InputOnlineFile(new Uri(imageUris[selectedImage])), replyMarkup: inlineKeyboard);
-                //}
+                    await SendMessageAsync($"Ich habe {things.TotalHits} Ergebnisse gefunden.");
+                    selectedImage = 0;
+                    await bot.SendPhotoAsync(chatId: id, photo: new InputOnlineFile(new Uri(things.Hits[selectedImage].PreviewImage)), replyMarkup: CustomKeyboards.SelectNextInlineKeyboard);
+                }
             }
             else
             {
@@ -130,11 +124,12 @@ namespace PrintAssistConsole
         }
 
 
-        private async Task SendMessageAsync(string message)
+        private async Task SendMessageAsync(string message, ParseMode parseMode = ParseMode.Default)
         {
             await bot.SendChatActionAsync(id, ChatAction.Typing);
             await bot.SendTextMessageAsync(chatId: id,
-                        text: message
+                        text: message,
+                        parseMode: parseMode
                         );
         }
         private async Task SendMessageAsync(SearchModelState state)
@@ -241,24 +236,69 @@ namespace PrintAssistConsole
 
         internal async Task HandleCallbackQueryAsync(Update update)
         {
-            
+            await bot.AnswerCallbackQueryAsync(update.CallbackQuery.Id);
+            InlineKeyboardMarkup keyboard = null;
 
-            var inlineKeyboard = new InlineKeyboardMarkup(new[]
+            if (update.CallbackQuery.Data == "select") //select
+            {
+                return;
+            }
+            else if (update.CallbackQuery.Data == "<") //previous
+            {
+                if (selectedImage == 0 && currentSearchPage > 1) //get next page
                 {
-                    // first row
-                    new []
-                    {
-                        InlineKeyboardButton.WithCallbackData("<", "<"),
-                        InlineKeyboardButton.WithCallbackData("Auswählen", "select"),
-                        InlineKeyboardButton.WithCallbackData(">", ">")
-                    }
-                });
+                    selectedImage = 9;
+                    currentSearchPage--;
+                    things = await ThingiverseAPIWrapper.SearchThingsAsync(serachTerm, currentSearchPage, pageCount);
+                    keyboard = CustomKeyboards.PreviousSelectNextInlineKeyboard;
+                }
+                else if(selectedImage == 1 && currentSearchPage == 1)
+                {
+                    selectedImage--;
+                    keyboard = CustomKeyboards.SelectNextInlineKeyboard;
+                }
+                else
+                {
+                    selectedImage--;
+                    keyboard = CustomKeyboards.PreviousSelectNextInlineKeyboard;
+                }
+            }
+            else if(update.CallbackQuery.Data == ">") //next
+            {
+                if(selectedImage + (currentSearchPage-1)*pageCount == things.TotalHits -2 ) // -2 weil beim letzten bild kein weiter pfeil angezeigt werden soll.
+                {
+                    keyboard = CustomKeyboards.PreviousSelectInlineKeyboard;
+                    selectedImage++;
+                }
+                else if (selectedImage == pageCount - 1) //get next page
+                {
+                    selectedImage = 0;
+                    currentSearchPage++;
+                    things = await ThingiverseAPIWrapper.SearchThingsAsync(serachTerm, currentSearchPage, pageCount);
+                    keyboard = CustomKeyboards.PreviousSelectNextInlineKeyboard;
+                }
+                else
+                {
+                    selectedImage++;
+                    keyboard = CustomKeyboards.PreviousSelectNextInlineKeyboard;
+                }
+            }
+            
+            try
+            {
+                //await SendMessageAsync((selectedImage + 1).ToString());
+                if (things.Hits[selectedImage].PreviewImage.ToLower().EndsWith(".jpg") || 
+                    things.Hits[selectedImage].PreviewImage.ToLower().EndsWith(".png") || 
+                    things.Hits[selectedImage].PreviewImage.ToLower().EndsWith(".bmp"))
+                {
+                    var tmp3 = new InputMediaPhoto(new InputMedia(things.Hits[selectedImage].PreviewImage));
+                    await bot.EditMessageMediaAsync(id, update.CallbackQuery.Message.MessageId, tmp3, keyboard);
+                }
+            }
+            catch (Exception ex)
+            {
 
-            //var tmp = new InputOnlineFile(new Uri(imageUris[selectedImage++]));
-
-            var tmp3 = new InputMediaPhoto(new InputMedia(imageUris[++selectedImage]));
-
-            await bot.EditMessageMediaAsync(id, update.CallbackQuery.Message.MessageId, tmp3, inlineKeyboard);
+            }
 
 
         }

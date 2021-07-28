@@ -54,8 +54,52 @@ namespace PrintAssistConsole
                             resizeKeyboard: true);
             }
         }
-        
 
+        public static InlineKeyboardMarkup PreviousSelectNextInlineKeyboard
+        {
+            get
+            {
+                return new InlineKeyboardMarkup(new[]
+                {
+                    new []
+                    {
+                        InlineKeyboardButton.WithCallbackData("<", "<"),
+                        InlineKeyboardButton.WithCallbackData("Auswählen", "select"),
+                        InlineKeyboardButton.WithCallbackData(">", ">")
+                    }
+                });
+            }
+        }
+
+        public static InlineKeyboardMarkup SelectNextInlineKeyboard
+        {
+            get
+            {
+                return new InlineKeyboardMarkup(new[]
+                {
+                    new []
+                    {
+                        InlineKeyboardButton.WithCallbackData("Auswählen", "select"),
+                        InlineKeyboardButton.WithCallbackData(">", ">")
+                    }
+                });
+            }
+        }
+
+        public static InlineKeyboardMarkup PreviousSelectInlineKeyboard
+        {
+            get
+            {
+                return new InlineKeyboardMarkup(new[]
+                {
+                    new []
+                    {
+                        InlineKeyboardButton.WithCallbackData("<", "<"),
+                        InlineKeyboardButton.WithCallbackData("Auswählen", "select")
+                    }
+                });
+            }
+        }
     }
 
     public class Conversation

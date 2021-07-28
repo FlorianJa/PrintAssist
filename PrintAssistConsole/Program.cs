@@ -8,6 +8,7 @@ using Grpc.Auth;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.Json;
 using PrintAssistConsole.Intents;
+using PrintAssistConsole.ThingiverseAPI;
 using PrintAssistConsole.Utilies;
 using System;
 using System.Collections.Generic;
@@ -39,6 +40,7 @@ namespace PrintAssistConsole
         private static string agentId;
         private static string dialogFlowAPIKeyFile;
         private static string botToken;
+        private static string thingiverseToken;
 
         public static async Task Main()
         {
@@ -48,6 +50,8 @@ namespace PrintAssistConsole
             agentId = configuration.GetValue<string>("AgentId");
             dialogFlowAPIKeyFile = configuration.GetValue<string>("DialogFlowAPIFile");
             botToken = configuration.GetValue<string>("BotToken");
+            thingiverseToken = configuration.GetValue<string>("ThingiverseToken");
+            ThingiverseAPIWrapper.Token = thingiverseToken;
 
             conversations = new RamConversationRepo();
 

@@ -11,9 +11,16 @@ namespace PrintAssistConsole.ThingiverseAPI
 
     public class ThingiverseAPIWrapper
     {
-        public static async Task<List<string>> SearchThingsAsync(string searchTerm)
+        public static string Token;
+
+        public static async Task<Things> SearchThingsAsync(string searchTerm, int page, int pageCount)
         {
-            var ret = new List<string>();
+            if(string.IsNullOrEmpty(Token))
+            {
+                throw new ArgumentNullException("Token is not set.");
+            }
+
+            Things myDeserializedThings = null;
             using (HttpClient client = new HttpClient())
             {
                 UriBuilder searchThing = new UriBuilder($"https://api.thingiverse.com/search/{searchTerm}");
@@ -21,20 +28,20 @@ namespace PrintAssistConsole.ThingiverseAPI
                 //searchThing.Query = "type=things";
                 //searchThing.Query = "per_page=5";
                 // include access token as query parameter
-                searchThing.Query = "type=things&per_page=5&access_token=TOKEN";
+                searchThing.Query = $"type=things&page={page}&per_page={pageCount}&access_token={Token}";
 
                 HttpResponseMessage response = await client.GetAsync(searchThing.Uri);
                 if (response.IsSuccessStatusCode)
                 {
                     var things = response.Content.ReadAsStringAsync().Result;
                     // Deserialize the json response
-                    Things myDeserializedThings = JsonConvert.DeserializeObject<Things>(things);
-                    foreach (var thingDetail in myDeserializedThings.Hits)
-                    {
-                        ret.Add(thingDetail.PreviewImage);
-                        // display the returned search results of things details (Id, name, PreviewImage)
-                        //Console.WriteLine("Thing Id: {0}, Name: {1},  Preview image link: {2}", thingDetail.Id, thingDetail.Name, thingDetail.PreviewImage);
-                    }
+                    myDeserializedThings = JsonConvert.DeserializeObject<Things>(things);
+                    //foreach (var thingDetail in myDeserializedThings.Hits)
+                    //{
+                    //    ret.Add(thingDetail.PreviewImage);
+                    //    // display the returned search results of things details (Id, name, PreviewImage)
+                    //    //Console.WriteLine("Thing Id: {0}, Name: {1},  Preview image link: {2}", thingDetail.Id, thingDetail.Name, thingDetail.PreviewImage);
+                    //}
                 }
                 else
                 {
@@ -42,7 +49,7 @@ namespace PrintAssistConsole.ThingiverseAPI
                 }
                 Console.WriteLine();
             }
-            return ret;
+            return myDeserializedThings;
         }
     }
 
@@ -59,6 +66,8 @@ namespace PrintAssistConsole.ThingiverseAPI
 
     public class Things
     {
+        [JsonProperty("total")]
+        public int TotalHits { get; set; }
         [JsonProperty("hits")]
         public List<SearchResult> Hits { get; set; }
     }
