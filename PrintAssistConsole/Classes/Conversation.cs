@@ -83,6 +83,7 @@ namespace PrintAssistConsole
         private SlicingProcess slicingProcess;
         private string selectedModel;
         private StartPrintProcess startPrintProcess;
+        private SearchModelDialog searchModelProcess;
         private readonly StateMachine<ConversationState, Trigger> machine;
         protected readonly ITelegramBotClient bot;
 
@@ -120,7 +121,7 @@ namespace PrintAssistConsole
 
             machine.Configure(ConversationState.EnteringNamen)
                 .OnExitAsync(async () => await SendGreetingWithNameAsync())
-                .Permit(Trigger.NameEntered, ConversationState.StartingPrint);
+                .Permit(Trigger.NameEntered, ConversationState.SearchModel);
                 //.Permit(Trigger.NameEntered, ConversationState.Idle);
 
             machine.Configure(ConversationState.Idle)
@@ -155,9 +156,19 @@ namespace PrintAssistConsole
                .OnEntryAsync(async () => await StartStartPrintProcessAsync())
                .Permit(Trigger.PrintStarted, ConversationState.Printing);
 
+            machine.Configure(ConversationState.SearchModel)
+               .OnEntryAsync(async () => await StartSerachModelProcessAsync())
+               ;
+
             machine.Configure(ConversationState.Printing)
                .OnEntryAsync(async () => await SendMessageAsync("PRINT STARTED"));
 
+        }
+
+        private async Task StartSerachModelProcessAsync()
+        {
+            this.searchModelProcess = new SearchModelDialog(Id, bot);
+            await searchModelProcess.StartAsync();
         }
 
         private async Task StartStartPrintProcessAsync()
@@ -403,10 +414,27 @@ namespace PrintAssistConsole
 
                             break;
                         }
+                    case ConversationState.SearchModel:
+                        {
+                            await searchModelProcess.HandleInputAsync(update);
+                            break;
+                        }
                     default:
                         break;
                 }
             }
+            else if(update.Type == UpdateType.CallbackQuery)
+            {
+                if (searchModelProcess != null)
+                {
+                    await searchModelProcess.HandleCallbackQueryAsync(update);
+                }
+                
+                
+
+
+            }
+
         }
 
      

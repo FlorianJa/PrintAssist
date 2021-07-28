@@ -17,6 +17,7 @@ namespace PrintAssistConsole
         StartingPrint,
         Unknown,
         STLFileReceived,
-        Printing
+        Printing,
+        SearchModel
     }
 }
