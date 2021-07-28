@@ -33,18 +33,22 @@
 	},
 	5: {
 		"text": "There should be a sticker on the spool with the information about the filament. It should be FILAMENT TYPE. One winding one the spool is between 30cm and 40cm. You need at least XX windings.",
-		"KeyboardButtons": [[ "Abbruch", "Filament ist nicht bereit", "Filament ist bereit" ]]
+		"KeyboardButtons": [
+		[ "Abbruch"],
+		[ "Falsches Material geladen oder zu wenig Material auf der Spule" ],
+		[ "Filament stimmt und ist genug" ]
+		]
 	},
 	7: {
 		"text": "You need to change the filament. Do you need help with this?",
-		"KeyboardButtons": [[ "Abbruch", "No", "Yes, I need help" ]]
+		"KeyboardButtons": [[ "Abbruch", "Nein", "Ja, ich brauche Hilfe" ]]
 	},
 	9: {
 		"text": "Start Change Filament Guide. (not implemented yet)",
-		"KeyboardButtons": [[ "Abbruch", "Back to the print procedrue" ]]
+		"KeyboardButtons": [[ "Abbruch", "Zurück zum Druck starten" ]]
 	},
 	8: {
 		"text": "Okay, just tell me when you changed the filament.",
-		"KeyboardButtons": [[ "Abbruch", "I changed the filament" ]]
+		"KeyboardButtons": [[ "Abbruch", "Ich habe das Filament gewechselt" ]]
 	}
 }

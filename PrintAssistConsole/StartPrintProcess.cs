@@ -22,13 +22,13 @@ namespace PrintAssistConsole
         CheckBuildplate = 1,
         Canceled = 2,
         CheckFilament = 3,
-        ShowRemoveHelp = 4,
-        ShowFilamentHelp = 5,
-        AskToStartAgain = 6,
-        FilamentNotOk = 7,
+        BuildplateHelp = 4,
+        FilamentHelp = 5,
+        PrinterReady = 6,
+        ChangeFilament = 7,
         WaitForFilamentChanged = 8,
-        HelpFilamentChange = 9,
-        PrintStarting = 10,
+        ChangeFilamentGuide = 9,
+        PrintStarted = 10,
     }
 
     public class StartPrintProcess
@@ -36,23 +36,24 @@ namespace PrintAssistConsole
         private enum Trigger
         {
             Start,
-            Okay,
             Cancel,
-            Next,
-            HowToRemove,
-            FilamentInformationHelp,
-            StartPrint,
-            FilamentNotOkay,
-            FilamenOkay,
-            Help,
-            NoHelp,
+            StartPrintProcedure,
+            GetHelpForBuildplate,
+            BuildplateIsReady,
+            GetHelpForFilament,
+            FilamentIsNotReady,
+            FilamentIsReady,
+            StartPrintNow,
+            ShowHelpForChangingFilament,
+            ChangeIndependently,
+            FilamentChanged
         }
 
         private StartPrintDialogDataProvider dialogData;
         private ITelegramBotClient bot;
         private long id;
         private StateMachine<StartPrintProcessState, Trigger> machine;
-        private List<string> dfContexts = new List<string>() { "startprint-followup" };
+        private List<string> dfContexts = new List<string>() { "startprintprocedure" };
 
         public event EventHandler PrintStarted;
         public event EventHandler StartPrintCanceled;
@@ -74,55 +75,55 @@ namespace PrintAssistConsole
             machine.Configure(StartPrintProcessState.Start)
                 .OnEntryAsync(async () => await SendMessageAsync(machine.State))
                 .Permit(Trigger.Cancel, StartPrintProcessState.Canceled)
-                .Permit(Trigger.Okay, StartPrintProcessState.CheckBuildplate);
+                .Permit(Trigger.StartPrintProcedure, StartPrintProcessState.CheckBuildplate);
 
             machine.Configure(StartPrintProcessState.CheckBuildplate)
                 .OnEntryAsync(async () => await SendMessageAsync(machine.State))
                 .Permit(Trigger.Cancel, StartPrintProcessState.Canceled)
-                .Permit(Trigger.Help, StartPrintProcessState.ShowRemoveHelp )
-                .Permit(Trigger.Next, StartPrintProcessState.CheckFilament);
+                .Permit(Trigger.GetHelpForBuildplate, StartPrintProcessState.BuildplateHelp)
+                .Permit(Trigger.BuildplateIsReady, StartPrintProcessState.CheckFilament);
 
             machine.Configure(StartPrintProcessState.CheckFilament)
                 .OnEntryAsync(async () => await SendMessageAsync(machine.State))
                 .Permit(Trigger.Cancel, StartPrintProcessState.Canceled)
-                .Permit(Trigger.Help, StartPrintProcessState.ShowFilamentHelp)
-                .Permit(Trigger.FilamentNotOkay, StartPrintProcessState.FilamentNotOk)
-                .Permit(Trigger.Next, StartPrintProcessState.AskToStartAgain);
+                .Permit(Trigger.GetHelpForFilament, StartPrintProcessState.FilamentHelp)
+                .Permit(Trigger.FilamentIsNotReady, StartPrintProcessState.ChangeFilament)
+                .Permit(Trigger.FilamentIsReady, StartPrintProcessState.PrinterReady);
 
-            machine.Configure(StartPrintProcessState.AskToStartAgain)
+            machine.Configure(StartPrintProcessState.PrinterReady)
                 .OnEntryAsync(async () => await SendMessageAsync(machine.State))
                 .Permit(Trigger.Cancel, StartPrintProcessState.Canceled)
-                .Permit(Trigger.StartPrint, StartPrintProcessState.PrintStarting);
+                .Permit(Trigger.StartPrintNow, StartPrintProcessState.PrintStarted);
 
-            machine.Configure(StartPrintProcessState.PrintStarting)
+            machine.Configure(StartPrintProcessState.PrintStarted)
                 .OnEntryAsync(async () => { await SendMessageAsync(machine.State); PrintStarted?.Invoke(this, null); });
 
-            machine.Configure(StartPrintProcessState.ShowRemoveHelp)
+            machine.Configure(StartPrintProcessState.BuildplateHelp)
                 .OnEntryAsync(async () => await SendMessageAsync(machine.State))
                 .Permit(Trigger.Cancel, StartPrintProcessState.Canceled)
-                .Permit(Trigger.Next, StartPrintProcessState.CheckFilament);
+                .Permit(Trigger.BuildplateIsReady, StartPrintProcessState.CheckFilament);
 
-            machine.Configure(StartPrintProcessState.ShowFilamentHelp)
+            machine.Configure(StartPrintProcessState.FilamentHelp)
                .OnEntryAsync(async () => await SendMessageAsync(machine.State))
                .Permit(Trigger.Cancel, StartPrintProcessState.Canceled)
-               .Permit(Trigger.FilamenOkay, StartPrintProcessState.AskToStartAgain)
-               .Permit(Trigger.FilamentNotOkay, StartPrintProcessState.FilamentNotOk);
+               .Permit(Trigger.FilamentIsReady, StartPrintProcessState.PrinterReady)
+               .Permit(Trigger.FilamentIsNotReady, StartPrintProcessState.ChangeFilament);
 
-            machine.Configure(StartPrintProcessState.FilamentNotOk)
+            machine.Configure(StartPrintProcessState.ChangeFilament)
               .OnEntryAsync(async () => await SendMessageAsync(machine.State))
               .Permit(Trigger.Cancel, StartPrintProcessState.Canceled)
-              .Permit(Trigger.Help, StartPrintProcessState.HelpFilamentChange)
-              .Permit(Trigger.NoHelp, StartPrintProcessState.WaitForFilamentChanged);
+              .Permit(Trigger.ShowHelpForChangingFilament, StartPrintProcessState.ChangeFilamentGuide)
+              .Permit(Trigger.ChangeIndependently, StartPrintProcessState.WaitForFilamentChanged);
 
-            machine.Configure(StartPrintProcessState.HelpFilamentChange)
+            machine.Configure(StartPrintProcessState.ChangeFilamentGuide)
               .OnEntryAsync(async () => await SendMessageAsync(machine.State))
               .Permit(Trigger.Cancel, StartPrintProcessState.Canceled)
-              .Permit(Trigger.Next, StartPrintProcessState.AskToStartAgain);
+              .Permit(Trigger.FilamentIsReady, StartPrintProcessState.PrinterReady); ;
 
             machine.Configure(StartPrintProcessState.WaitForFilamentChanged)
               .OnEntryAsync(async () => await SendMessageAsync(machine.State))
               .Permit(Trigger.Cancel, StartPrintProcessState.Canceled)
-              .Permit(Trigger.Okay, StartPrintProcessState.AskToStartAgain);
+              .Permit(Trigger.FilamentChanged, StartPrintProcessState.PrinterReady);
 
             #endregion
 
@@ -132,137 +133,240 @@ namespace PrintAssistConsole
         {
             var intent = await IntentDetector.Instance.CallDFAPIAsync(id, update.Message.Text, dfContexts, true);
 
-            var outputContexts = ((BaseIntent)intent).response.QueryResult.OutputContexts;
 
-            SetDFContext(outputContexts);
-
-            switch (machine.State)
+            if (intent is DefaultFallbackIntent)
             {
-                case StartPrintProcessState.BeforeStart:
-                    break;
-                case StartPrintProcessState.Start:
-                    {
-                        switch (intent)
-                        {
-                            case CheckUpNext:
-                                {
-                                    await machine.FireAsync(Trigger.Okay);
-                                    break;
-                                }
-                            case CheckUpCancel:
-                                {
-                                    await machine.FireAsync(Trigger.Cancel);
-                                    break;
-                                }
-                            default:
-                                break;
-                        }
+                await SendMessageAsync(((DefaultFallbackIntent)intent).Process());
+                await SendMessageAsync(machine.State);
+            }
+            else
+            {
+                var outputContexts = ((BaseIntent)intent).response.QueryResult.OutputContexts;
+
+                SetDFContext(outputContexts);
+
+                switch (machine.State)
+                {
+                    case StartPrintProcessState.BeforeStart:
                         break;
-                    }
-                case StartPrintProcessState.CheckBuildplate:
-                    {
-                        //var intent = await IntentDetector.Instance.CallDFAPIAsync(id, update.Message.Text, "CheckUpNext-followup"); //reuse the Yes No intents from the tutorial
-                        switch (intent)
+                    case StartPrintProcessState.Start:
                         {
-                            case CheckBuildplateNext:
-                                {
-                                    await machine.FireAsync(Trigger.Next);
-                                    break;
-                                }
-                            case CheckBuildplateCancel:
-                                {
-                                    await machine.FireAsync(Trigger.Cancel);
-                                    break;
-                                }
-                            case CheckBuildplateHelp:
-                                {
-                                    await machine.FireAsync(Trigger.Help);
-                                    break;
-                                }
-                            default:
-                                break;
+                            switch (intent)
+                            {
+                                case StartProcedure:
+                                    {
+                                        await machine.FireAsync(Trigger.StartPrintProcedure);
+                                        break;
+                                    }
+                                case StartProcedureCancel:
+                                    {
+                                        await machine.FireAsync(Trigger.Cancel);
+                                        break;
+                                    }
+                                default:
+                                    {
+                                        await SendMessageAsync("Ich habe folgenden Intent erkannt: " + intent.GetType().ToString() + "Dieser Intent wird hier noch nicht unterstützt.");
+                                        await SendMessageAsync(machine.State);
+                                        break;
+                                    }
+                            }
+                            break;
                         }
-                        break;
-                    }
-                case StartPrintProcessState.Canceled:
-                    break;
-                case StartPrintProcessState.CheckFilament:
-                    {
-                        //var intent = await IntentDetector.Instance.CallDFAPIAsync(id, update.Message.Text); //reuse the Yes No intents from the tutorial
-                        switch (intent)
+                    case StartPrintProcessState.CheckBuildplate:
                         {
-                            case CheckFilamentNext:
-                                {
-                                    await machine.FireAsync(Trigger.Next);
-                                    break;
-                                }
-                            case CheckFilamentNotOk:
-                                {
-                                    await machine.FireAsync(Trigger.Next);
-                                    break;
-                                }
-                            case TutorialCancel:
-                                {
-                                    await machine.FireAsync(Trigger.Cancel);
-                                    break;
-                                }
-                            case CheckFilamentHelp:
-                                {
-                                    await machine.FireAsync(Trigger.Help);
-                                    break;
-                                }
-                            default:
-                                break;
+                            switch (intent)
+                            {
+                                case BuildplateIsReady:
+                                    {
+                                        await machine.FireAsync(Trigger.BuildplateIsReady);
+                                        break;
+                                    }
+                                case StartProcedureCancel:
+                                    {
+                                        await machine.FireAsync(Trigger.Cancel);
+                                        break;
+                                    }
+                                case GetHelpForBuildplate:
+                                    {
+                                        await machine.FireAsync(Trigger.GetHelpForBuildplate);
+                                        break;
+                                    }
+                                default:
+                                    {
+                                        await SendMessageAsync("Ich habe folgenden Intent erkannt: " + intent.GetType().ToString() + "Dieser Intent wird hier noch nicht unterstützt.");
+                                        await SendMessageAsync(machine.State);
+                                        break;
+                                    }
+                            }
+                            break;
                         }
+                    case StartPrintProcessState.Canceled:
                         break;
-                    }
-                case StartPrintProcessState.ShowRemoveHelp:
-                    {
-                        //var intent = await IntentDetector.Instance.CallDFAPIAsync(id, update.Message.Text, "CheckUpNext-followup"); //reuse the Yes No intents from the tutorial
-                        switch (intent)
+                    case StartPrintProcessState.CheckFilament:
                         {
-                            case CheckBuildplateNext:
-                                {
-                                    await machine.FireAsync(Trigger.Next);
-                                    break;
-                                }
-                            default:
-                                break;
+                            switch (intent)
+                            {
+                                case FilamentIsReady:
+                                    {
+                                        await machine.FireAsync(Trigger.FilamentIsReady);
+                                        break;
+                                    }
+                                case FilamentIsNotReady:
+                                    {
+                                        await machine.FireAsync(Trigger.FilamentIsNotReady);
+                                        break;
+                                    }
+                                case StartProcedureCancel:
+                                    {
+                                        await machine.FireAsync(Trigger.Cancel);
+                                        break;
+                                    }
+                                case GetHelpForFilament:
+                                    {
+                                        await machine.FireAsync(Trigger.GetHelpForFilament);
+                                        break;
+                                    }
+                                default:
+                                    {
+                                        await SendMessageAsync("Ich habe folgenden Intent erkannt: " + intent.GetType().ToString() + "Dieser Intent wird hier noch nicht unterstützt.");
+                                        await SendMessageAsync(machine.State);
+                                        break;
+                                    }
+                            }
+                            break;
                         }
-                        break;
-                    }
-                case StartPrintProcessState.ShowFilamentHelp:
-                    break;
-                case StartPrintProcessState.AskToStartAgain:
-                    {
-                        //var intent = await IntentDetector.Instance.CallDFAPIAsync(id, update.Message.Text); //reuse the Yes No intents from the tutorial
-                        switch (intent)
+                    case StartPrintProcessState.BuildplateHelp:
                         {
-                            case PrintNowYes:
-                                {
-                                    await machine.FireAsync(Trigger.StartPrint);
-                                    break;
-                                }
-                            case PrintNowNo:
-                                {
-                                    await machine.FireAsync(Trigger.Cancel);
-                                    break;
-                                }
-                            default:
-                                break;
+                            switch (intent)
+                            {
+                                case BuildplateIsReady:
+                                    {
+                                        await machine.FireAsync(Trigger.BuildplateIsReady);
+                                        break;
+                                    }
+                                default:
+                                    {
+                                        await SendMessageAsync("Ich habe folgenden Intent erkannt: " + intent.GetType().ToString() + "Dieser Intent wird hier noch nicht unterstützt.");
+                                        await SendMessageAsync(machine.State);
+                                        break;
+                                    }
+                            }
+                            break;
                         }
+                    case StartPrintProcessState.FilamentHelp:
+                        {
+                            switch (intent)
+                            {
+                                case FilamentIsNotReady:
+                                    {
+                                        await machine.FireAsync(Trigger.FilamentIsNotReady);
+                                        break;
+                                    }
+                                case FilamentIsReady:
+                                    {
+                                        await machine.FireAsync(Trigger.FilamentIsReady);
+                                        break;
+                                    }
+                                default:
+                                    {
+                                        await SendMessageAsync("Ich habe folgenden Intent erkannt: " + intent.GetType().ToString() + "Dieser Intent wird hier noch nicht unterstützt.");
+                                        await SendMessageAsync(machine.State);
+                                        break;
+                                    }
+                            }
+                            break;
+                        }
+                    case StartPrintProcessState.PrinterReady:
+                        {
+                            switch (intent)
+                            {
+                                case StartPrintNow:
+                                    {
+                                        await machine.FireAsync(Trigger.StartPrintNow);
+                                        break;
+                                    }
+                                case StartProcedureCancel:
+                                    {
+                                        await machine.FireAsync(Trigger.Cancel);
+                                        break;
+                                    }
+                                default:
+                                    {
+                                        await SendMessageAsync("Ich habe folgenden Intent erkannt: " + intent.GetType().ToString() + "Dieser Intent wird hier noch nicht unterstützt.");
+                                        await SendMessageAsync(machine.State);
+                                        break;
+                                    }
+                            }
+                            break;
+                        }
+                    case StartPrintProcessState.ChangeFilament:
+                        {
+                            switch (intent)
+                            {
+                                case ShowHelpForChangingFilament:
+                                    {
+                                        await machine.FireAsync(Trigger.ShowHelpForChangingFilament);
+                                        break;
+                                    }
+                                case ChangeIndependently:
+                                    {
+                                        await machine.FireAsync(Trigger.ChangeIndependently);
+                                        break;
+                                    }
+                                default:
+                                    {
+                                        await SendMessageAsync("Ich habe folgenden Intent erkannt: " + intent.GetType().ToString() + "Dieser Intent wird hier noch nicht unterstützt.");
+                                        await SendMessageAsync(machine.State);
+                                        break;
+                                    }
+                            }
+                            break;
+                        }
+                    case StartPrintProcessState.WaitForFilamentChanged:
+                        {
+                            switch (intent)
+                            {
+                                case FilamentChanged:
+                                    {
+                                        await machine.FireAsync(Trigger.FilamentChanged);
+                                        break;
+                                    }
+                                default:
+                                    {
+                                        await SendMessageAsync("Ich habe folgenden Intent erkannt: " + intent.GetType().ToString() + "Dieser Intent wird hier noch nicht unterstützt.");
+                                        await SendMessageAsync(machine.State);
+                                        break;
+                                    }
+                            }
+                            break;
+                        }
+                    case StartPrintProcessState.ChangeFilamentGuide:
+                        {
+                            switch (intent)
+                            {
+                                case FilamentChanged:
+                                case BackToStartPrintProcedure:
+                                    {
+                                        await machine.FireAsync(Trigger.FilamentIsReady);
+                                        break;
+                                    }
+                                default:
+                                    {
+                                        await SendMessageAsync("Ich habe folgenden Intent erkannt: " + intent.GetType().ToString() + "Dieser Intent wird hier noch nicht unterstützt.");
+                                        await SendMessageAsync(machine.State);
+                                        break;
+                                    }
+                            }
+                            break;
+                        }
+                    case StartPrintProcessState.PrintStarted:
                         break;
-                    }
-                case StartPrintProcessState.FilamentNotOk:
-                    break;
-                case StartPrintProcessState.WaitForFilamentChanged:
-                    break;
-                case StartPrintProcessState.HelpFilamentChange:
-                    break;
-                case StartPrintProcessState.PrintStarting:
-                    break;
-                default:
-                    break;
+                    default:
+                        {
+                            
+                            break;
+                        }
+                }
             }
         }
 
@@ -297,6 +401,13 @@ namespace PrintAssistConsole
             }
         }
 
+        private async Task SendMessageAsync(string message)
+        {
+                await bot.SendChatActionAsync(id, ChatAction.Typing);
+                await bot.SendTextMessageAsync(chatId: id,
+                            text: message
+                            );
+        }
         private async Task SendMessageAsync(StartPrintProcessState state)
         {
             var message = dialogData.GetMessage((int)state);

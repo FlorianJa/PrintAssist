@@ -7,8 +7,10 @@ using System.Threading.Tasks;
 
 namespace PrintAssistConsole.Intents
 {
-    [IntentAttribute("CheckUpNext")]
-    public class CheckUpNext : BaseIntent
+
+
+    [IntentAttribute("StartPrintProcedure.BackToStartPrintProcedure")]
+    public class BackToStartPrintProcedure : BaseIntent
     {
         public override string Process()
         {
@@ -16,8 +18,8 @@ namespace PrintAssistConsole.Intents
         }
     }
 
-    [IntentAttribute("CheckUpCancel")]
-    public class CheckUpCancel : BaseIntent
+    [IntentAttribute("StartPrintProcedure.BuildplateIsReady")]
+    public class BuildplateIsReady : BaseIntent
     {
         public override string Process()
         {
@@ -25,8 +27,8 @@ namespace PrintAssistConsole.Intents
         }
     }
 
-    [IntentAttribute("CheckBuildplateNext")]
-    public class CheckBuildplateNext : BaseIntent
+    [IntentAttribute("StartPrintProcedure.FilamentChanged")]
+    public class FilamentChanged : BaseIntent
     {
         public override string Process()
         {
@@ -34,8 +36,8 @@ namespace PrintAssistConsole.Intents
         }
     }
 
-    [IntentAttribute("CheckBuildplateCancel")]
-    public class CheckBuildplateCancel : BaseIntent
+    [IntentAttribute("StartPrintProcedure.FilamentIsNotReady")]
+    public class FilamentIsNotReady : BaseIntent
     {
         public override string Process()
         {
@@ -43,8 +45,8 @@ namespace PrintAssistConsole.Intents
         }
     }
 
-    [IntentAttribute("CheckBuildplateHelp")]
-    public class CheckBuildplateHelp : BaseIntent
+    [IntentAttribute("StartPrintProcedure.FilamentIsReady")]
+    public class FilamentIsReady : BaseIntent
     {
         public override string Process()
         {
@@ -52,18 +54,8 @@ namespace PrintAssistConsole.Intents
         }
     }
 
-    [IntentAttribute("CheckFilamentNotOk")]
-    public class CheckFilamentNotOk : BaseIntent
-    {
-       
-        public override string Process()
-        {
-            throw new NotImplementedException();
-        }
-    }
-
-    [IntentAttribute("CheckFilamentNext")]
-    public class CheckFilamentNext : BaseIntent
+    [IntentAttribute("StartPrintProcedure.GetHelpForBuildplate")]
+    public class GetHelpForBuildplate : BaseIntent
     {
         public override string Process()
         {
@@ -71,18 +63,9 @@ namespace PrintAssistConsole.Intents
         }
     }
 
-    [IntentAttribute("CheckFilamentHelp")]
-    public class CheckFilamentHelp : BaseIntent
-    {
 
-        public override string Process()
-        {
-            throw new NotImplementedException();
-        }
-    }
-
-    [IntentAttribute("PrintNowYes")]
-    public class PrintNowYes : BaseIntent
+    [IntentAttribute("StartPrintProcedure.GetHelpForFilament")]
+    public class GetHelpForFilament : BaseIntent
     {
         public override string Process()
         {
@@ -90,8 +73,8 @@ namespace PrintAssistConsole.Intents
         }
     }
 
-    [IntentAttribute("PrintNowNo")]
-    public class PrintNowNo : BaseIntent
+    [IntentAttribute("StartPrintProcedure.ShowHelpForChangingFilament")]
+    public class ShowHelpForChangingFilament : BaseIntent
     {
         public override string Process()
         {
@@ -99,6 +82,51 @@ namespace PrintAssistConsole.Intents
         }
     }
 
+    [IntentAttribute("StartPrintProcedure.StartPrintNo")]
+    public class StartPrintNo : BaseIntent
+    {
+        public override string Process()
+        {
+            throw new NotImplementedException();
+        }
+    }
+    
+    [IntentAttribute("StartPrintProcdure.Start")]
+    public class StartProcedure : BaseIntent
+    {
+        public override string Process()
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    [IntentAttribute("StartPrintProcedure.StartPrintNow")]
+    public class StartPrintNow : BaseIntent
+    {
+        public override string Process()
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+
+    [IntentAttribute("StartPrintProcedure.Cancel")]
+    public class StartProcedureCancel : BaseIntent
+    {
+        public override string Process()
+        {
+            throw new NotImplementedException();
+        }
+    }
+    [IntentAttribute("StartPrintProcedure.ChangeIndependently")]
+    public class ChangeIndependently : BaseIntent
+    {
+        public override string Process()
+        {
+            throw new NotImplementedException();
+        }
+    }
+    
 }
 
 
