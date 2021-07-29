@@ -74,9 +74,9 @@ namespace PrintAssistConsole
                 things = await ThingiverseAPIWrapper.SearchThingsAsync(update.Message.Text,currentSearchPage, pageCount);
                 if(things != null)
                 {
-                    await SendMessageAsync($"Ich habe {things.TotalHits} Ergebnisse gefunden.");
+                    await SendMessageAsync($"Ich habe {things.TotalHits} Ergebnisse gefunden. Benutze die Pfeil-Buttons um durch die Suchergebnisse zu navigieren. Wenn dir ein Modell gefällt, klicke auf \"Auswählen\".");
                     selectedImage = 0;
-                    await bot.SendPhotoAsync(chatId: id, photo: new InputOnlineFile(new Uri(things.Hits[selectedImage].PreviewImage)), replyMarkup: CustomKeyboards.SelectNextInlineKeyboard);
+                    await bot.SendPhotoAsync(chatId: id, photo: new InputOnlineFile(new Uri(things.Hits[selectedImage].PreviewImage)), caption: things.Hits[selectedImage].Name, replyMarkup: CustomKeyboards.SelectNextInlineKeyboard);
                 }
             }
             else
@@ -292,7 +292,8 @@ namespace PrintAssistConsole
                     things.Hits[selectedImage].PreviewImage.ToLower().EndsWith(".bmp"))
                 {
                     var tmp3 = new InputMediaPhoto(new InputMedia(things.Hits[selectedImage].PreviewImage));
-                    await bot.EditMessageMediaAsync(id, update.CallbackQuery.Message.MessageId, tmp3, keyboard);
+                    await bot.EditMessageMediaAsync(id, update.CallbackQuery.Message.MessageId, tmp3);
+                    await bot.EditMessageCaptionAsync(id, update.CallbackQuery.Message.MessageId, things.Hits[selectedImage].Name, replyMarkup: keyboard);
                 }
             }
             catch (Exception ex)
