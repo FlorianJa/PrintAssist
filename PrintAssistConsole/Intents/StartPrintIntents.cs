@@ -8,6 +8,34 @@ using System.Threading.Tasks;
 namespace PrintAssistConsole.Intents
 {
 
+    [IntentAttribute("PrintObjectRecognised.Yes")]
+    public class PrintObjectRecognisedYes : BaseIntent
+    {
+        public override string Process()
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    [IntentAttribute("PrintObjectRecognised.No")]
+    public class PrintObjectRecognisedNo : BaseIntent
+    {
+        public override string Process()
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+
+
+    [IntentAttribute("StartPrint")]
+    public class StartPrint : BaseIntent
+    {
+        public override string Process()
+        {
+            throw new NotImplementedException();
+        }
+    }
 
     [IntentAttribute("StartPrintProcedure.BackToStartPrintProcedure")]
     public class BackToStartPrintProcedure : BaseIntent

@@ -57,23 +57,24 @@ namespace PrintAssistConsole
         public event EventHandler SearchAborted;
         public event EventHandler<Tuple<string,string>> SearchCompleted;
 
-        public SearchModelDialog(long chatId, ITelegramBotClient bot)
+        public SearchModelDialog(long chatId, ITelegramBotClient bot, string searchTerm = null)
         {
             id = chatId;
             this.bot = bot;
             dialogData = new SearchModelDialogDataProvider();
-
+            this.searchTerm = searchTerm;
             // Instantiate a new state machine in the Start state
             machine = new StateMachine<SearchModelState, Trigger>(SearchModelState.BeforeStart);
 
             #region setup statemachine
             // Configure the before start state
             machine.Configure(SearchModelState.BeforeStart)
-                .OnExitAsync(async () => await SendMessageAsync(machine.State))
-                .Permit(Trigger.Start, SearchModelState.EnteringSearchTerm);
+                //.OnExitAsync(async () => await SendMessageAsync(machine.State))
+                .Permit(Trigger.Start, SearchModelState.EnteringSearchTerm)
+                .Permit(Trigger.SearchTermEntered, SearchModelState.ModelSelection);
 
             machine.Configure(SearchModelState.EnteringSearchTerm)
-                .OnEntryAsync(async () => await SendMessageAsync(machine.State))
+                //.OnEntryAsync(async () => await SendMessageAsync(machine.State))
                 .Permit(Trigger.SearchTermEntered, SearchModelState.ModelSelection);
 
             machine.Configure(SearchModelState.ModelSelection)
@@ -96,26 +97,7 @@ namespace PrintAssistConsole
                 case SearchModelState.EnteringSearchTerm:
                     {
                         searchTerm = update.Message.Text;
-                        await SendMessageAsync($"Ok, ich suche nach: *{searchTerm}*", ParseMode.Markdown);
-
-                        things = await ThingiverseAPIWrapper.SearchThingsAsync(update.Message.Text, currentSearchPage, pageCount);
-                        if (things != null)
-                        {
-                            await SendMessageAsync($"Ich habe {things.TotalHits} Ergebnisse gefunden. Benutze die Pfeil-Buttons unter dem Bild um durch die Suchergebnisse zu navigieren. Wenn dir ein Modell gefällt, klicke auf \"Auswählen\".", CustomKeyboards.AbortSearchNewSearchTermKeyboard);
-                            currentImage = 0;
-
-                            (fileId,imageUrl) = await ThingiverseAPIWrapper.GetImageURLByThingId(things.Hits[0].Id);
-
-
-                            var tmp = await bot.SendPhotoAsync(chatId: id, photo: new InputOnlineFile(new Uri(imageUrl)), caption: things.Hits[currentImage].Name, replyMarkup: CustomKeyboards.SelectNextInlineKeyboard);
-                            selectionMessageId = tmp.MessageId;
-                        }
-                        else
-                        {
-                            await SendMessageAsync($"Ich habe keine Ergebnisse für *{searchTerm}* gefunden. Probier es mit einem anderen Begriff", ParseMode.Markdown);
-                        }
-
-                        await machine.FireAsync(Trigger.SearchTermEntered);
+                        await InitalThingiverseAPIReqeustAsync();
                         break;
                     }
                 case SearchModelState.ModelSelection:
@@ -151,6 +133,31 @@ namespace PrintAssistConsole
                 default:
                     break;
             }
+        }
+
+        private async Task InitalThingiverseAPIReqeustAsync()
+        {
+            
+            await SendMessageAsync($"Ok, ich suche nach: *{searchTerm}*", ParseMode.Markdown);
+
+            things = await ThingiverseAPIWrapper.SearchThingsAsync(searchTerm, currentSearchPage, pageCount);
+            if (things != null)
+            {
+                await SendMessageAsync($"Ich habe {things.TotalHits} Ergebnisse gefunden. Benutze die Pfeil-Buttons unter dem Bild um durch die Suchergebnisse zu navigieren. Wenn dir ein Modell gefällt, klicke auf \"Auswählen\".", CustomKeyboards.AbortSearchNewSearchTermKeyboard);
+                currentImage = 0;
+
+                (fileId, imageUrl) = await ThingiverseAPIWrapper.GetImageURLByThingId(things.Hits[0].Id);
+
+
+                var tmp = await bot.SendPhotoAsync(chatId: id, photo: new InputOnlineFile(new Uri(imageUrl)), caption: things.Hits[currentImage].Name, replyMarkup: CustomKeyboards.SelectNextInlineKeyboard);
+                selectionMessageId = tmp.MessageId;
+            }
+            else
+            {
+                await SendMessageAsync($"Ich habe keine Ergebnisse für *{searchTerm}* gefunden. Probier es mit einem anderen Begriff", ParseMode.Markdown);
+            }
+
+            await machine.FireAsync(Trigger.SearchTermEntered);
         }
 
         internal async Task HandleCallbackQueryAsync(Update update)
@@ -342,7 +349,17 @@ namespace PrintAssistConsole
 
         public async Task StartAsync()
         {
-            await machine.FireAsync(Trigger.Start);
+            if (string.IsNullOrEmpty(searchTerm))
+            {
+                await machine.FireAsync(Trigger.Start);
+            }
+            else
+            {
+                await InitalThingiverseAPIReqeustAsync();
+                //await machine.FireAsync(Trigger.SearchTermEntered);
+            }
+
+
         }
 
         

@@ -144,6 +144,9 @@ namespace PrintAssistConsole
         private StartPrintProcess startPrintProcess;
         private SearchModelDialog searchModelProcess;
         private string modelName;
+        private string printObject = null;
+        private List<string> contexts;
+        private CollectPrintInformationDialog collectingDataForPrintingDialog;
         private readonly StateMachine<ConversationState, Trigger> machine;
         protected readonly ITelegramBotClient bot;
 
@@ -192,6 +195,11 @@ namespace PrintAssistConsole
                 .Permit(Trigger.SearchModel, ConversationState.SearchModel)
                 .Permit(Trigger.StartPrint, ConversationState.CollectDataForPrint);
 
+            machine.Configure(ConversationState.CollectDataForPrint)
+                .OnEntryAsync(async () => await StartCollectingDataForPrintingAsync())
+                .Permit(Trigger.StartSlicing, ConversationState.Slicing)
+                .Permit(Trigger.SearchModel, ConversationState.SearchModel);
+
             machine.Configure(ConversationState.HardwareTutorial)
                 .OnEntryAsync(async () => await StartHardwareTutorialAsync())
                 .Permit(Trigger.HardwareTutorialFinished, ConversationState.Idle)
@@ -219,7 +227,7 @@ namespace PrintAssistConsole
                .Permit(Trigger.PrintStarted, ConversationState.Printing);
 
             machine.Configure(ConversationState.SearchModel)
-               .OnEntryAsync(async () => await StartSerachModelProcessAsync())
+               .OnEntryAsync(async () => await StartSearchModelProcessAsync())
                .Permit(Trigger.SearchCompleted, ConversationState.AskToSliceSelectedFile);
 
             machine.Configure(ConversationState.AskToSliceSelectedFile)
@@ -233,9 +241,29 @@ namespace PrintAssistConsole
 
         }
 
-        private async Task StartSerachModelProcessAsync()
+        private async Task StartCollectingDataForPrintingAsync()
         {
-            this.searchModelProcess = new SearchModelDialog(Id, bot);
+            collectingDataForPrintingDialog = new CollectPrintInformationDialog(Id, bot, printObject, contexts);
+            collectingDataForPrintingDialog.StartPrintWithModel += CollectingDataForPrintingDialog_StartPrintWithModel;
+            collectingDataForPrintingDialog.StartPrintWithoutModel += CollectingDataForPrintingDialog_StartPrintWithoutModel;
+            await collectingDataForPrintingDialog.StartAsync();
+        }
+
+        private async void CollectingDataForPrintingDialog_StartPrintWithoutModel(object sender, string e)
+        {
+            printObject = e;
+            await machine.FireAsync(Trigger.SearchModel);
+        }
+
+        private async void CollectingDataForPrintingDialog_StartPrintWithModel(object sender, string e)
+        {
+            selectedModelUrl = e; 
+            await machine.FireAsync(Trigger.StartSlicing);
+        }
+
+        private async Task StartSearchModelProcessAsync()
+        {
+            this.searchModelProcess = new SearchModelDialog(Id, bot, printObject);
             searchModelProcess.SearchAborted += SearchModelProcess_SearchAborted;
             searchModelProcess.SearchCompleted += SearchModelProcess_SearchCompleted;
             await searchModelProcess.StartAsync();
@@ -336,15 +364,21 @@ namespace PrintAssistConsole
                 {
                     case ConversationState.Connected:
                         {
-                            await machine.FireAsync(Trigger.Starting);
+                            if (update.Type == UpdateType.Message)
+                            {
+                                await machine.FireAsync(Trigger.Starting);
+                            }
                             break;
                         }
                     case ConversationState.ConversationStarting:
                         break;
                     case ConversationState.EnteringNamen:
                         {
-                            AssignUserName(update.Message.Text);
-                            await machine.FireAsync(Trigger.NameEntered);
+                            if (update.Type == UpdateType.Message)
+                            {
+                                AssignUserName(update.Message.Text);
+                                await machine.FireAsync(Trigger.NameEntered);
+                            }
                             break;
                         }
                     case ConversationState.Idle:
@@ -395,6 +429,23 @@ namespace PrintAssistConsole
                                     case WorkflowTutorialStartIntent:
                                         {
                                             await machine.FireAsync(Trigger.StartWorkflowTutorial);
+                                            break;
+                                        }
+
+                                    case StartPrint startPrintIntent:
+                                        {
+                                            printObject = null;
+                                            contexts = new List<string>();
+                                            foreach (var context in startPrintIntent.response.QueryResult.OutputContexts)
+                                            {
+                                                contexts.Add(context.ContextName.ContextId);
+                                            }
+                                            if (startPrintIntent.response.QueryResult.Parameters.Fields.ContainsKey("object"))
+                                            {
+                                                printObject = startPrintIntent.response.QueryResult.Parameters.Fields["object"].StringValue;
+                                            }
+                                            //startPrintIntent.response.QueryResult.Parameters
+                                            await machine.FireAsync(Trigger.StartPrint);
                                             break;
                                         }
                                     default:
@@ -525,6 +576,11 @@ namespace PrintAssistConsole
                                 default:
                                     break;
                             }
+                            break;
+                        }
+                    case ConversationState.CollectDataForPrint:
+                        {
+                            await collectingDataForPrintingDialog.HandleInputAsync(update);
                             break;
                         }
                     default:

@@ -54,7 +54,11 @@ namespace PrintAssistConsole
 
         public async Task<object> CallDFAPIAsync(long sessionId, string message, string contextName, bool clearContext = false)
         {
-            var tmp = new List<string>() { contextName };
+            var tmp = new List<string>();
+            if(contextName != null)
+            {
+                tmp.Add(contextName);
+            }
 
             return await CallDFAPIAsync(sessionId, message, tmp, clearContext);
         }

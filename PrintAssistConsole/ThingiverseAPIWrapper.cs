@@ -80,10 +80,10 @@ namespace PrintAssistConsole.ThingiverseAPI
 
                         string url = null;
                         int fileId = -1;
-                        var firstSTLFile = files.Where(x => x.name.EndsWith(".stl")).First();
+                        var firstSTLFile = files.FirstOrDefault(x => x.name.ToLower().EndsWith(".stl"));
                         if (firstSTLFile != null)
                         {
-                            var file = firstSTLFile.default_image?.sizes.Where(x => x.size == "large" && x.type == "display").FirstOrDefault();
+                            var file = firstSTLFile.default_image?.sizes.FirstOrDefault(x => x.size == "large" && x.type == "display");
 
                             url = file.url;
                             fileId = firstSTLFile.id;
@@ -102,7 +102,7 @@ namespace PrintAssistConsole.ThingiverseAPI
                 }
             }
 
-            return null;
+            return new Tuple<int, string>(-1, null);
         }
 
         internal static async Task<Tuple<string, string>> GetDownloadLinkForFileById(int thingId, int fileId)

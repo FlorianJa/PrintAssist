@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Timers;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
@@ -76,6 +77,10 @@ namespace PrintAssistConsole
         private string slicingProfile;
         private PrusaSlicerCLICommands cliCommands;
         private string modelName;
+        private int counter;
+        private int progessMessageId;
+        private long fromId;
+        private Timer Timer;
 
         public event EventHandler SlicingProcessCompletedWithoutStartPrint;
         public event EventHandler<string> SlicingProcessCompletedWithStartPrint;
@@ -251,11 +256,32 @@ namespace PrintAssistConsole
             tmp.LayerHeight = layerHeight;
             tmp.SupportMaterial = supportMaterial;
             tmp.FillDensity = fillDensity/100f;
+
+            ////var message = await SendMessageAsync("Slicing...");
+            
+
+            var message = await bot.SendTextMessageAsync(id, "Slicing");
+            progessMessageId = message.MessageId;
+            fromId = message.Chat.Id;
+
+
+            Timer = new Timer();
+            Timer.Interval = 500;
+            Timer.Elapsed += Timer_Elapsed1;
+            Timer.Start();
             await slicingServiceClient.MakeRequest(tmp);
         }
 
+        private async void Timer_Elapsed1(object sender, ElapsedEventArgs e)
+        {
+            counter++;
+            var newText = "Slicing" + String.Concat(Enumerable.Repeat(".", (counter % 3) + 1));
+            await bot.EditMessageTextAsync(id, progessMessageId, newText);
+        }
+        
         private async void SlicingServiceClient_SlicingCompleted(object sender, SlicingCompletedEventArgs args)
         {
+            Timer.Stop();
             gcodeFile = args.GcodeLink;
             var message = "Slicing completed. " + Environment.NewLine;
             message += $"Print duration = {args.PrintDuration}";
@@ -612,15 +638,17 @@ namespace PrintAssistConsole
             }
         }
 
-        private async Task SendMessageAsync(string text, IReplyMarkup keyboardMarkup = null)
+        private async Task<Telegram.Bot.Types.Message> SendMessageAsync(string text, IReplyMarkup keyboardMarkup = null)
         {
             keyboardMarkup ??= new ReplyKeyboardRemove();
 
             await bot.SendChatActionAsync(id, ChatAction.Typing);
-            await bot.SendTextMessageAsync(chatId: id,
+             var message = await bot.SendTextMessageAsync(chatId: id,
                         text: text,
-                        replyMarkup: keyboardMarkup); 
-            
+                        replyMarkup: keyboardMarkup);
+
+            return message;
+
         }
     }
 
