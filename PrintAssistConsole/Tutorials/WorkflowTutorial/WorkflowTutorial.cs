@@ -36,7 +36,7 @@ namespace PrintAssistConsole
         }
         
         private readonly StateMachine<WorkflowTutorialState, Trigger> machine;
-
+        public event EventHandler Finished;
         public WorkflowTutorial(long chatId, ITelegramBotClient bot, ITutorialDataProvider tutorialData): base(chatId,bot,tutorialData)
         {
             // Instantiate a new state machine in the Start state
@@ -115,7 +115,7 @@ namespace PrintAssistConsole
 
             // Configure the End state
             machine.Configure(WorkflowTutorialState.End)
-                .OnEntryAsync(async () => await SendMessageAsync(machine.State));
+                .OnEntryAsync(async () => { await SendMessageAsync(machine.State); Finished?.Invoke(this, null); });
 
             // Configure the Cancel state
             machine.Configure(WorkflowTutorialState.Cancel);

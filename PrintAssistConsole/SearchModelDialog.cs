@@ -121,7 +121,9 @@ namespace PrintAssistConsole
                                     }
                                 case AbortSearch:
                                     {
+                                        await bot.EditMessageReplyMarkupAsync(id, selectionMessageId);
                                         await SendMessageAsync("Okay.", new ReplyKeyboardRemove());
+                                        SearchAborted?.Invoke(this, null);
                                         break;
                                     }
                                 default:

@@ -133,7 +133,8 @@ namespace PrintAssistConsole
             SearchCompleted,
             SliceLater,
             SearchModel,
-            StartPrint
+            StartPrint,
+            SearchAborted
         }
 
         public Int64 Id { get; private set; }
@@ -229,7 +230,8 @@ namespace PrintAssistConsole
 
             machine.Configure(ConversationState.SearchModel)
                .OnEntryAsync(async () => await StartSearchModelProcessAsync())
-               .Permit(Trigger.SearchCompleted, ConversationState.AskToSliceSelectedFile);
+               .Permit(Trigger.SearchCompleted, ConversationState.AskToSliceSelectedFile)
+               .Permit(Trigger.SearchAborted, ConversationState.Idle);
 
             machine.Configure(ConversationState.AskToSliceSelectedFile)
                .OnEntryAsync(async () => await SendMessageAsync("Möchtest du die Datei jetzt slicen und drucken?", CustomKeyboards.NoYesKeyboard))
@@ -276,9 +278,9 @@ namespace PrintAssistConsole
             await machine.FireAsync(Trigger.SearchCompleted);
         }
 
-        private void SearchModelProcess_SearchAborted(object sender, EventArgs e)
+        private async void SearchModelProcess_SearchAborted(object sender, EventArgs e)
         {
-            throw new NotImplementedException();
+            await machine.FireAsync(Trigger.SearchAborted);
         }
 
         private async Task StartStartPrintProcessAsync()
@@ -327,8 +329,14 @@ namespace PrintAssistConsole
         {
             ITutorialDataProvider data = new WorkflowTutorialDataProvider();
             var tutorial = new WorkflowTutorial(Id, bot, data);
+            tutorial.Finished += Tutorial_Finished;
             this.tutorial = tutorial;
             await tutorial.StartAsync();
+        }
+
+        private async void Tutorial_Finished(object sender, EventArgs e)
+        {
+            await machine.FireAsync(Trigger.WorkTutorialFinished);
         }
 
         private async Task StartHardwareTutorialAsync()
