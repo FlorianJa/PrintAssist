@@ -15,7 +15,7 @@ namespace PrintAssistConsole
         public HardwareTutorialDataProvider()
         {
             // deserialize JSON directly from a file
-            using (StreamReader streamReader = File.OpenText(@".\BotContent\HardwareTutorial.json"))
+            using (StreamReader streamReader = File.OpenText(@".\BotContent\HardwareTutorial_de.json"))
             {
                 using (var jsonReader = new JsonTextReader(streamReader))
                 {

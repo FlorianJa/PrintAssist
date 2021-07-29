@@ -1,0 +1,54 @@
+{
+	0: {
+		"text": "Bevor wir den Druck starten können, musst du ein paar Sachen für mich überprüfen.",
+		"KeyboardButtons": [[ "Druckstart abbrechen", "Okay" ]]
+	},
+
+	1: {
+		"text": "Ist die Buidlplate leer und sauber?",
+		"KeyboardButtons": [
+			[ "Druckstart abbrechen", "Hilfe" ],
+			[ "Ja, Buildplate ist leer und sauber" ]
+		]
+	},
+
+	3: {
+		"text": "Ist FILAMENT TYPE geladen und ist genug Material auf der Spule?",
+		"KeyboardButtons": [
+			[ "Druckstart abbrechen", "Hilfe" ],
+			[ "Nein, falsches Material geladen oder zu wenig Material auf der Spule" ],
+			[ "Ja, Filament ist bereit" ]
+			]
+	},
+	6: {
+		"text": "Wir können anfangen zu drucken. Der Druck wird ungefähr XX Stunden dauern. Möchtest du den Druck jetzt starten?",
+		"KeyboardButtons": [[ "Druckstart abbrechen", "Druck jetzt starten" ]]
+	},
+	10: {
+		"text": "Der Drucker heizt jetzt auf und startet dann gleich. Während des Drucks kannst du mich nach dem Druckfortschritt fragen. Wenn der Druck fertig ist, sage ich dir Bescheid."
+	},
+	4: {
+		"text": "Nimm die Buildplate vom Drucker und bieg sie vorsichtig, wie im Video, damit sich die vorherigen Drucke lösen. Entfern alle Objekte von der Buildplate und reinige sie mit XX. Anschließend muss du die Buildplate wieder auf den legen.",
+		"KeyboardButtons": [[ "Druckstart abbrechen", "Buildplate ist leer und sauber" ]]
+	},
+	5: {
+		"text": "Auf der Spule sollte sich ein Sticker befinden, auf dem die wichtigsten Informationen zu dem Filament befinden. Es sollte FILAMENT TYPE sein. Eine Windung auf der Spule ist ungefähr 30 bis 40 cm. Für deinen Druck brauchst du mindestens XX Windungen.",
+		"KeyboardButtons": [
+		[ "Abbruch"],
+		[ "Falsches Material geladen oder zu wenig Material auf der Spule" ],
+		[ "Filament stimmt und ist genug" ]
+		]
+	},
+	7: {
+		"text": "Du musst das Filament wechseln. Brauchst du dabei Hilfe?",
+		"KeyboardButtons": [[ "Abbruch", "Nein", "Ja, ich brauche Hilfe" ]]
+	},
+	9: {
+		"text": "Start Change Filament Guide (not implemented yet)",
+		"KeyboardButtons": [[ "Abbruch", "Zurück zum Druck starten" ]]
+	},
+	8: {
+		"text": "Okay, sag Bescheid wenn du das Filament gewechselt hast.",
+		"KeyboardButtons": [[ "Abbruch", "Ich habe das Filament gewechselt" ]]
+	}
+}

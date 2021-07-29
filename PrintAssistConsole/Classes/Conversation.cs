@@ -188,7 +188,8 @@ namespace PrintAssistConsole
                 //.Permit(Trigger.NameEntered, ConversationState.Idle);
 
             machine.Configure(ConversationState.Idle)
-                .OnEntryAsync(async () => await SendMessageAsync("What can i do for you?"))
+                //.OnEntryAsync(async () => await SendMessageAsync("What can i do for you?"))
+                .OnEntryAsync(async () => await SendMessageAsync("Was kann ich für dich tun?"))
                 .Permit(Trigger.StartWorkflowTutorial, ConversationState.WorkflowTutorial)
                 .Permit(Trigger.StartHardwareTutorial, ConversationState.HardwareTutorial)
                 .Permit(Trigger.STLFileReceived, ConversationState.STLFileReceived)
@@ -318,7 +319,8 @@ namespace PrintAssistConsole
 
         private async Task AskForSlicingNowAsync()
         {
-            await SendMessageAsync("I got your model. Do you want to slice it now?", CustomKeyboards.NoYesKeyboard);
+            //await SendMessageAsync("I got your model. Do you want to slice it now?", CustomKeyboards.NoYesKeyboard);
+            await SendMessageAsync("Ich hab dein Modell erhalten. Möchtest du das Modell jetzt slicen?", CustomKeyboards.NoYesKeyboard);
         }
 
         private async Task StartWorkflowTutorialAsync()
@@ -344,7 +346,8 @@ namespace PrintAssistConsole
 
         private async Task SendWelcomeMessageAsync()
         {
-            await SendMessageAsync("Hi I am your print assistant. I can do stuff for you. How should i call you?");
+            //await SendMessageAsync("Hi I am your print assistant. I can do stuff for you. How should i call you?");
+            await SendMessageAsync("Hi. Ich bin dein persönlicher Druckassistent. Ich kann XXX für dich tun. Wie soll ich dich nennen?");
         }
         private async Task SendMessageAsync(string text, IReplyMarkup replyKeyboardMarkup = null)
         {
@@ -542,7 +545,8 @@ namespace PrintAssistConsole
                                     }
                                 case TutorialNo:
                                     {
-                                        await SendMessageAsync("Okay, I will store it for you. You can ask me later to slice it.");
+                                        //await SendMessageAsync("Okay, I will store it for you. You can ask me later to slice it.");
+                                        await SendMessageAsync("Okay, ich passe auf die Datei auf. Du kannst mich später nochmal fragen.");
                                         await machine.FireAsync(Trigger.Cancel);
                                         break;
                                     }
@@ -569,7 +573,8 @@ namespace PrintAssistConsole
                                     }
                                 case AskToSliceFileNo:
                                     {
-                                        await SendMessageAsync("Okay, I will store it for you. You can ask me later to slice it.");
+                                        //await SendMessageAsync("Okay, I will store it for you. You can ask me later to slice it.");
+                                        await SendMessageAsync("Okay, ich passe auf die Datei auf. Du kannst mich später nochmal fragen.");
                                         await machine.FireAsync(Trigger.Cancel);
                                         break;
                                     }

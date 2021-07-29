@@ -375,7 +375,7 @@ namespace PrintAssistConsole
         public SearchModelDialogDataProvider()
         {
             // deserialize JSON directly from a file
-            using (StreamReader streamReader = System.IO.File.OpenText(@".\BotContent\SearchModelDialog.json"))
+            using (StreamReader streamReader = System.IO.File.OpenText(@".\BotContent\SearchModelDialog_de.json"))
             {
                 using (var jsonReader = new JsonTextReader(streamReader))
                 {

@@ -519,7 +519,7 @@ namespace PrintAssistConsole
         public StartPrintDialogDataProvider()
         {
             // deserialize JSON directly from a file
-            using (StreamReader streamReader = System.IO.File.OpenText(@".\BotContent\StartPrintingProcess.json"))
+            using (StreamReader streamReader = System.IO.File.OpenText(@".\BotContent\StartPrintingProcess_de.json"))
             {
                 using (var jsonReader = new JsonTextReader(streamReader))
                 {

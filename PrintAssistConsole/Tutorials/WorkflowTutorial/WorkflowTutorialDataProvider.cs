@@ -15,7 +15,7 @@ namespace PrintAssistConsole
         public WorkflowTutorialDataProvider()
         {
             // deserialize JSON directly from a file
-            using (StreamReader streamReader = File.OpenText(@".\BotContent\WorkflowTutorial.json"))
+            using (StreamReader streamReader = File.OpenText(@".\BotContent\WorkflowTutorial_de.json"))
             {
                 using (var jsonReader = new JsonTextReader(streamReader))
                 {

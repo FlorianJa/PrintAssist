@@ -660,7 +660,7 @@ namespace PrintAssistConsole
         public SlicingDialogDataProvider()
         {
             // deserialize JSON directly from a file
-            using (StreamReader streamReader = System.IO.File.OpenText(@".\BotContent\SlicingProcess.json"))
+            using (StreamReader streamReader = System.IO.File.OpenText(@".\BotContent\SlicingProcess_de.json"))
             {
                 using (var jsonReader = new JsonTextReader(streamReader))
                 {

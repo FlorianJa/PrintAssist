@@ -1,0 +1,67 @@
+{
+	0:
+	{
+		"text": "Okay. Schauen wir uns an, was du machen musst, bevor du einen Druck starten kannst.",
+		"KeyboardButtons": [ [ "Erklärung abbrechen", "Weiter" ] ]
+	},
+	1:
+	{
+		"text": "Zunächst benötigst du ein 3D-Modell des Objekts, welches du herstellen willst. Du kannst ein eigenes Modell erstellen oder ein Modell aus dem Internet herunterladen. Ich kann für dich auch im Internet nach 3D-Modellen suchen. (1/10)",
+		"KeyboardButtons": [ [ "Erklärung abbrechen", "Weiter" ] ]
+	},
+	2:
+	{
+		"text": "Als Nächstes muss das Modell in Maschinencode umwandeln werden, damit der Drucker weiß, was er zu tun hat. Dieser Vorgang wird als Slicing bezeichnet. Das Modell wird in dünne Schichten geschnitten und die Bewegungen des Druckers werden berechnet. (2/10)",
+		"KeyboardButtons": [ [ "Erklärung abbrechen", "Weiter" ] ]
+	},
+	3:
+	{
+		"text": "Im Slicing-Prozess können viele verschiedene Parameter einstellen werden, die sich auf die Qualität, Stabilität und Druckdauer des Objekts auswirken. (3/10)",
+		"KeyboardButtons": [ [ "Erklärung abbrechen", "Weiter" ] ]
+	},
+	4: {
+		"text": "Die Qualität der Oberfläche wird hauptsächlich durch die Schichthöhe beeinflusst. Je dünner die Schicht ist, desto glatter ist die Oberfläche. Dieser Drucker kann Schichthöhen zwischen 0,07 mm und 0,3 mm drucken. (4/10)",
+		"photoFilePaths": [ ".\\BotContent\\images\\LayerHeights.png", ".\\BotContent\\images\\0.05mmLayer.png", ".\\BotContent\\images\\0.2mmLayer.png", ".\\BotContent\\images\\0.3mmLayer.png" ],
+		"KeyboardButtons": [ [ "Erklärung abbrechen", "Weiter" ] ]
+	},
+	5:
+	{
+		"text": "Um Material zu sparen und die Druckzeit zu verkürzen, werden 3D-gedruckte Objekte meistens nicht massiv gedruckt. Es können verschiedene Füllmuster und Füllgrade auswählen. Ein höherer Füllgrad erhöht die Stabilität, aber auch die Druckdauer. (5/10)",
+		"photoFilePaths": [ ".\\BotContent\\images\\InfillPattern.png", ".\\BotContent\\images\\InfillPercentage.png" ],
+		"KeyboardButtons": [ [ "Erklärung abbrechen", "Weiter" ] ]
+	},
+	6:
+	{
+		"text": "Da der Drucker nicht in die Luft drucken kann, müssen Objekte mit Überhängen sogenannte Stützstrukturen hinzufügen. Stützstrukturen sind zusätzliches Material, welches nach dem Druck entfernt werden muss. (6/10)",
+		"photoFilePaths": [ ".\\BotContent\\images\\Overhangs.jpg" ],
+		"KeyboardButtons": [ [ "Erklärung abbrechen", "Weiter" ] ]
+	},
+	7:
+	{
+		"text": "Du kannst das Slicing mit einer Slicing-Software auf deinem PC durchführen oder du kannst mir dein Modell schicken und ich werde es für mit dir slicen. (7/10)",
+		"KeyboardButtons": [ [ "Erklärung abbrechen", "Weiter" ] ]
+	},
+	8:
+	{
+		"text": "Nach dem Slicen muss die Datei mit dem Maschinencode (gcode) auf den Drucker hochgeladen werden. Wenn du dein Modell selbst geslicst hast, kannst du mir die Datei schicken, und ich lade sie für dich hoch. Danach kann ich den Druck für dich starten. (8/10)",
+		"KeyboardButtons": [ [ "Erklärung abbrechen", "Weiter" ] ]
+	},
+	9:
+	{
+		"text": "Abhängig von der Objektgröße und den Slicing-Parametern kann der Druck mehrere Stunden dauern. (9/10)",
+		"KeyboardButtons": [ [ "Erklärung abbrechen", "Weiter" ] ]
+	},
+	10:
+	{
+		"text": "In der Regel ist dein Druck nach dem Druckvorgang direkt einsatzbereit. In manchen Fällen musst du das Objekt noch ein bisschen nachbearbeiten, z. B. Stützstrukturen entfernen. (10/10)",
+		"KeyboardButtons": [ [ "Erklärung abbrechen", "Weiter" ] ]
+	},
+	11:
+	{
+		"text": "Dies war ein kurzer Überblick über den 3D-Druck-Workflow. Was kann ich jetzt für dich tun?",
+	},
+	12:
+	{
+		"text": "Ok."
+	}
+}
