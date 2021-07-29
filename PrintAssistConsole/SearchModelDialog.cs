@@ -19,7 +19,9 @@ namespace PrintAssistConsole
     public enum SearchModelState : int
     {
         BeforeStart = -1,
-        Start = 0,
+        EnteringSearchTerm = 0,
+        ModelSelection = 1,
+        SearchCompleted = 2,
     }
 
     public class SearchModelDialog
@@ -30,6 +32,9 @@ namespace PrintAssistConsole
         {
             Start,
             Cancel,
+            SearchTermEntered,
+            RestartSearch,
+            ModelSelected,
         }
         private SearchModelDialogDataProvider dialogData;
         private long id;
@@ -37,12 +42,20 @@ namespace PrintAssistConsole
         private StateMachine<SearchModelState, Trigger> machine;
 
 
-        private List<string> dfContexts = new List<string>() { "startprintprocedure" };
+        private List<string> dfContexts = new List<string>() { "selectingModel" };
         private Things things;
-        private int selectedImage;
+        private int currentImage;
         private int pageCount = 10;
         private int currentSearchPage = 1;
-        private string serachTerm;
+        private string searchTerm;
+        private int selectionMessageId;
+        private int fileId;
+        private string imageUrl;
+        private string modelUrl;
+        private string modelName;
+
+        public event EventHandler SearchAborted;
+        public event EventHandler<Tuple<string,string>> SearchCompleted;
 
         public SearchModelDialog(long chatId, ITelegramBotClient bot)
         {
@@ -56,74 +69,172 @@ namespace PrintAssistConsole
             #region setup statemachine
             // Configure the before start state
             machine.Configure(SearchModelState.BeforeStart)
-                .Permit(Trigger.Start, SearchModelState.Start);
+                .OnExitAsync(async () => await SendMessageAsync(machine.State))
+                .Permit(Trigger.Start, SearchModelState.EnteringSearchTerm);
 
-            machine.Configure(SearchModelState.Start)
-                .OnEntryAsync(async () => await SendMessageAsync(machine.State));
+            machine.Configure(SearchModelState.EnteringSearchTerm)
+                .OnEntryAsync(async () => await SendMessageAsync(machine.State))
+                .Permit(Trigger.SearchTermEntered, SearchModelState.ModelSelection);
+
+            machine.Configure(SearchModelState.ModelSelection)
+                .Permit(Trigger.RestartSearch, SearchModelState.EnteringSearchTerm)
+                .Permit(Trigger.ModelSelected, SearchModelState.SearchCompleted);
+
+            machine.Configure(SearchModelState.SearchCompleted)
+                .OnEntry(() => SearchCompleted(this, new Tuple<string,string>(modelName,modelUrl)));
             #endregion
         }
 
 
         public async Task HandleInputAsync(Update update)
         {
-            if (machine.State == SearchModelState.Start)
-            {
-                serachTerm = update.Message.Text;
-                await SendMessageAsync($"Ok, ich suche nach: *{serachTerm}*", ParseMode.Markdown);
 
-                things = await ThingiverseAPIWrapper.SearchThingsAsync(update.Message.Text,currentSearchPage, pageCount);
-                if(things != null)
-                {
-                    await SendMessageAsync($"Ich habe {things.TotalHits} Ergebnisse gefunden. Benutze die Pfeil-Buttons um durch die Suchergebnisse zu navigieren. Wenn dir ein Modell gefällt, klicke auf \"Auswählen\".");
-                    selectedImage = 0;
-                    await bot.SendPhotoAsync(chatId: id, photo: new InputOnlineFile(new Uri(things.Hits[selectedImage].PreviewImage)), caption: things.Hits[selectedImage].Name, replyMarkup: CustomKeyboards.SelectNextInlineKeyboard);
-                }
+            switch (machine.State)
+            {
+                case SearchModelState.BeforeStart:
+                    break;
+                case SearchModelState.EnteringSearchTerm:
+                    {
+                        searchTerm = update.Message.Text;
+                        await SendMessageAsync($"Ok, ich suche nach: *{searchTerm}*", ParseMode.Markdown);
+
+                        things = await ThingiverseAPIWrapper.SearchThingsAsync(update.Message.Text, currentSearchPage, pageCount);
+                        if (things != null)
+                        {
+                            await SendMessageAsync($"Ich habe {things.TotalHits} Ergebnisse gefunden. Benutze die Pfeil-Buttons unter dem Bild um durch die Suchergebnisse zu navigieren. Wenn dir ein Modell gefällt, klicke auf \"Auswählen\".", CustomKeyboards.AbortSearchNewSearchTermKeyboard);
+                            currentImage = 0;
+
+                            (fileId,imageUrl) = await ThingiverseAPIWrapper.GetImageURLByThingId(things.Hits[0].Id);
+
+
+                            var tmp = await bot.SendPhotoAsync(chatId: id, photo: new InputOnlineFile(new Uri(imageUrl)), caption: things.Hits[currentImage].Name, replyMarkup: CustomKeyboards.SelectNextInlineKeyboard);
+                            selectionMessageId = tmp.MessageId;
+                        }
+                        else
+                        {
+                            await SendMessageAsync($"Ich habe keine Ergebnisse für *{searchTerm}* gefunden. Probier es mit einem anderen Begriff", ParseMode.Markdown);
+                        }
+
+                        await machine.FireAsync(Trigger.SearchTermEntered);
+                        break;
+                    }
+                case SearchModelState.ModelSelection:
+                    {
+                        if(update.Type == UpdateType.CallbackQuery)
+                        {
+                            await HandleCallbackQueryAsync(update);
+                        }
+                        else // type == message
+                        {
+                            var intent = await IntentDetector.Instance.CallDFAPIAsync(id, update.Message.Text, dfContexts, true);
+
+                            switch (intent)
+                            {
+                                case NewSearchTerm:
+                                    {
+                                        await bot.EditMessageReplyMarkupAsync(id, selectionMessageId);
+                                        await SendMessageAsync("Okay.", new ReplyKeyboardRemove());
+                                        await machine.FireAsync(Trigger.RestartSearch);
+                                        break;
+                                    }
+                                case AbortSearch:
+                                    {
+                                        await SendMessageAsync("Okay.", new ReplyKeyboardRemove());
+                                        break;
+                                    }
+                                default:
+                                    break;
+                            }
+                        }
+                        break;
+                    }
+                default:
+                    break;
             }
-            else
+        }
+
+        internal async Task HandleCallbackQueryAsync(Update update)
+        {
+            await bot.AnswerCallbackQueryAsync(update.CallbackQuery.Id);
+            InlineKeyboardMarkup keyboard = null;
+
+            if (update.CallbackQuery.Data == "select") //select
             {
-                var intent = await IntentDetector.Instance.CallDFAPIAsync(id, update.Message.Text, dfContexts, true);
-
-
-                if (intent is DefaultFallbackIntent)
+                (modelName,modelUrl) = await ThingiverseAPIWrapper.GetDownloadLinkForFileById(things.Hits[currentImage].Id, fileId);
+                await SendMessageAsync("Okay.");
+                await machine.FireAsync(Trigger.ModelSelected);
+            }
+            else if (update.CallbackQuery.Data == "<") //previous
+            {
+                if (currentImage == 0 && currentSearchPage > 1) //get next page
                 {
-                    await SendMessageAsync(((DefaultFallbackIntent)intent).Process());
-                    await SendMessageAsync(machine.State);
+                    currentImage = 9;
+                    currentSearchPage--;
+                    things = await ThingiverseAPIWrapper.SearchThingsAsync(searchTerm, currentSearchPage, pageCount);
+                    keyboard = CustomKeyboards.PreviousSelectNextInlineKeyboard;
+                }
+                else if (currentImage == 1 && currentSearchPage == 1)
+                {
+                    currentImage--;
+                    keyboard = CustomKeyboards.SelectNextInlineKeyboard;
                 }
                 else
                 {
-                    //var outputContexts = ((BaseIntent)intent).response.QueryResult.OutputContexts;
-
-                    //SetDFContext(outputContexts);
+                    currentImage--;
+                    keyboard = CustomKeyboards.PreviousSelectNextInlineKeyboard;
                 }
+            }
+            else if (update.CallbackQuery.Data == ">") //next
+            {
+                if (currentImage + (currentSearchPage - 1) * pageCount == things.TotalHits - 2) // -2 weil beim letzten bild kein weiter pfeil angezeigt werden soll.
+                {
+                    keyboard = CustomKeyboards.PreviousSelectInlineKeyboard;
+                    currentImage++;
+                }
+                else if (currentImage == pageCount - 1) //get next page
+                {
+                    currentImage = 0;
+                    currentSearchPage++;
+                    things = await ThingiverseAPIWrapper.SearchThingsAsync(searchTerm, currentSearchPage, pageCount);
+                    keyboard = CustomKeyboards.PreviousSelectNextInlineKeyboard;
+                }
+                else
+                {
+                    currentImage++;
+                    keyboard = CustomKeyboards.PreviousSelectNextInlineKeyboard;
+                }
+            }
+
+            try
+            {
+                (fileId, imageUrl) = await ThingiverseAPIWrapper.GetImageURLByThingId(things.Hits[currentImage].Id);
+                if(!string.IsNullOrEmpty(imageUrl))
+                {
+                    var newPhoto = new InputMediaPhoto(new InputMedia(imageUrl));
+                    await bot.EditMessageMediaAsync(id, update.CallbackQuery.Message.MessageId, newPhoto);
+                    await bot.EditMessageCaptionAsync(id, update.CallbackQuery.Message.MessageId, things.Hits[currentImage].Name, replyMarkup: keyboard);
+                }
+                //if (things.Hits[selectedImage].PreviewImage.ToLower().EndsWith(".jpg") ||
+                //    things.Hits[selectedImage].PreviewImage.ToLower().EndsWith(".png") ||
+                //    things.Hits[selectedImage].PreviewImage.ToLower().EndsWith(".bmp"))
+                //{
+                    
+                //}
+            }
+            catch (Exception ex)
+            {
+
             }
         }
 
-        public async Task<Message> SendInlineKeyboard(ITelegramBotClient botClient, Telegram.Bot.Types.Message message)
+        private async Task SendMessageAsync(string message, IReplyMarkup keyboard)
         {
-            //await botClient.SendChatActionAsync(message.Chat.Id, ChatAction.Typing);
-
-            //// Simulate longer running task
-            //await Task.Delay(500);
-
-            //var inlineKeyboard = new InlineKeyboardMarkup(new[]
-            //{
-            //        // first row
-            //        new []
-            //        {
-            //            InlineKeyboardButton.WithCallbackData("<", "<"),
-            //            InlineKeyboardButton.WithCallbackData("Auswählen", "select"),
-            //            InlineKeyboardButton.WithCallbackData(">", ">")
-            //        }
-            //    });
-
-            //return await botClient.SendTextMessageAsync(chatId: message.Chat.Id,
-            //                                            text: "Choose",
-            //                                            replyMarkup: inlineKeyboard);
-
-            return null;
+            await bot.SendChatActionAsync(id, ChatAction.Typing);
+            await bot.SendTextMessageAsync(chatId: id,
+                        text: message,
+                        replyMarkup: keyboard
+                        );
         }
-
-
         private async Task SendMessageAsync(string message, ParseMode parseMode = ParseMode.Default)
         {
             await bot.SendChatActionAsync(id, ChatAction.Typing);
@@ -234,75 +345,7 @@ namespace PrintAssistConsole
             await machine.FireAsync(Trigger.Start);
         }
 
-        internal async Task HandleCallbackQueryAsync(Update update)
-        {
-            await bot.AnswerCallbackQueryAsync(update.CallbackQuery.Id);
-            InlineKeyboardMarkup keyboard = null;
-
-            if (update.CallbackQuery.Data == "select") //select
-            {
-                return;
-            }
-            else if (update.CallbackQuery.Data == "<") //previous
-            {
-                if (selectedImage == 0 && currentSearchPage > 1) //get next page
-                {
-                    selectedImage = 9;
-                    currentSearchPage--;
-                    things = await ThingiverseAPIWrapper.SearchThingsAsync(serachTerm, currentSearchPage, pageCount);
-                    keyboard = CustomKeyboards.PreviousSelectNextInlineKeyboard;
-                }
-                else if(selectedImage == 1 && currentSearchPage == 1)
-                {
-                    selectedImage--;
-                    keyboard = CustomKeyboards.SelectNextInlineKeyboard;
-                }
-                else
-                {
-                    selectedImage--;
-                    keyboard = CustomKeyboards.PreviousSelectNextInlineKeyboard;
-                }
-            }
-            else if(update.CallbackQuery.Data == ">") //next
-            {
-                if(selectedImage + (currentSearchPage-1)*pageCount == things.TotalHits -2 ) // -2 weil beim letzten bild kein weiter pfeil angezeigt werden soll.
-                {
-                    keyboard = CustomKeyboards.PreviousSelectInlineKeyboard;
-                    selectedImage++;
-                }
-                else if (selectedImage == pageCount - 1) //get next page
-                {
-                    selectedImage = 0;
-                    currentSearchPage++;
-                    things = await ThingiverseAPIWrapper.SearchThingsAsync(serachTerm, currentSearchPage, pageCount);
-                    keyboard = CustomKeyboards.PreviousSelectNextInlineKeyboard;
-                }
-                else
-                {
-                    selectedImage++;
-                    keyboard = CustomKeyboards.PreviousSelectNextInlineKeyboard;
-                }
-            }
-            
-            try
-            {
-                //await SendMessageAsync((selectedImage + 1).ToString());
-                if (things.Hits[selectedImage].PreviewImage.ToLower().EndsWith(".jpg") || 
-                    things.Hits[selectedImage].PreviewImage.ToLower().EndsWith(".png") || 
-                    things.Hits[selectedImage].PreviewImage.ToLower().EndsWith(".bmp"))
-                {
-                    var tmp3 = new InputMediaPhoto(new InputMedia(things.Hits[selectedImage].PreviewImage));
-                    await bot.EditMessageMediaAsync(id, update.CallbackQuery.Message.MessageId, tmp3);
-                    await bot.EditMessageCaptionAsync(id, update.CallbackQuery.Message.MessageId, things.Hits[selectedImage].Name, replyMarkup: keyboard);
-                }
-            }
-            catch (Exception ex)
-            {
-
-            }
-
-
-        }
+        
     }
 
 

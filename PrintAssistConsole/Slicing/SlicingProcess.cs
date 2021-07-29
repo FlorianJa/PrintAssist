@@ -75,16 +75,19 @@ namespace PrintAssistConsole
         private bool objectNeedsToHandleMechanicalForces;
         private string slicingProfile;
         private PrusaSlicerCLICommands cliCommands;
+        private string modelName;
 
         public event EventHandler SlicingProcessCompletedWithoutStartPrint;
         public event EventHandler<string> SlicingProcessCompletedWithStartPrint;
 
-        public SlicingProcess(long chatId, ITelegramBotClient bot, string modelPath)
+        public SlicingProcess(long chatId, ITelegramBotClient bot, string modelPath, string modelName)
         {
             dialogData = new SlicingDialogDataProvider();
             this.bot = bot;
             this.id = chatId;
             this.modelPath = modelPath;
+            this.modelName = modelName;
+
             // Instantiate a new state machine in the Start state
             machine = new StateMachine<SlicingProcessState, Trigger>(SlicingProcessState.BeforeStart);
 
@@ -244,6 +247,7 @@ namespace PrintAssistConsole
             slicingServiceClient.SlicingCompleted += SlicingServiceClient_SlicingCompleted;
             var tmp = PrusaSlicerCLICommands.Default;
             tmp.FileURI = modelPath;
+            tmp.FileName = modelName;
             tmp.LayerHeight = layerHeight;
             tmp.SupportMaterial = supportMaterial;
             tmp.FillDensity = fillDensity/100f;

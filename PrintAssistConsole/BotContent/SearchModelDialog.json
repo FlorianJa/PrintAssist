@@ -1,5 +1,10 @@
 {
-	0: {
-		"text": "I can search a model for you. What do you want to print?"
+"-1":
+	{
+		"text": "Ich kann für dich nach einem Model suchen."
+	},
+
+0: {
+		"text": "Gibt bitte einen Suchbegriff ein."
 	},
 }

@@ -26,6 +26,17 @@ namespace PrintAssistConsole
             }
         }
 
+        public static ReplyKeyboardMarkup AbortSearchNewSearchTermKeyboard
+        {
+            get
+            {
+                return new ReplyKeyboardMarkup(
+                            new KeyboardButton[] { "Suche abbrechen", "Neuen Suchbegriff eingeben" },
+                            resizeKeyboard: true
+                        );
+            }
+        }
+
         public static ReplyKeyboardMarkup ExpertBeginnerKeyboard
         {
             get
@@ -118,16 +129,21 @@ namespace PrintAssistConsole
             Cancel,
             SlicingCompletedWithoutPrintStart,
             SlicingCompletedWithPrintStart,
-            PrintStarted
+            PrintStarted,
+            SearchCompleted,
+            SliceLater,
+            SearchModel,
+            StartPrint
         }
 
         public Int64 Id { get; private set; }
         public string UserName { get; internal set; }
         private Tutorial tutorial;
         private SlicingProcess slicingProcess;
-        private string selectedModel;
+        private string selectedModelUrl;
         private StartPrintProcess startPrintProcess;
         private SearchModelDialog searchModelProcess;
+        private string modelName;
         private readonly StateMachine<ConversationState, Trigger> machine;
         protected readonly ITelegramBotClient bot;
 
@@ -165,14 +181,16 @@ namespace PrintAssistConsole
 
             machine.Configure(ConversationState.EnteringNamen)
                 .OnExitAsync(async () => await SendGreetingWithNameAsync())
-                .Permit(Trigger.NameEntered, ConversationState.SearchModel);
+                .Permit(Trigger.NameEntered, ConversationState.Idle);
                 //.Permit(Trigger.NameEntered, ConversationState.Idle);
 
             machine.Configure(ConversationState.Idle)
                 .OnEntryAsync(async () => await SendMessageAsync("What can i do for you?"))
                 .Permit(Trigger.StartWorkflowTutorial, ConversationState.WorkflowTutorial)
                 .Permit(Trigger.StartHardwareTutorial, ConversationState.HardwareTutorial)
-                .Permit(Trigger.STLFileReceived, ConversationState.STLFileReceived);
+                .Permit(Trigger.STLFileReceived, ConversationState.STLFileReceived)
+                .Permit(Trigger.SearchModel, ConversationState.SearchModel)
+                .Permit(Trigger.StartPrint, ConversationState.CollectDataForPrint);
 
             machine.Configure(ConversationState.HardwareTutorial)
                 .OnEntryAsync(async () => await StartHardwareTutorialAsync())
@@ -202,7 +220,13 @@ namespace PrintAssistConsole
 
             machine.Configure(ConversationState.SearchModel)
                .OnEntryAsync(async () => await StartSerachModelProcessAsync())
-               ;
+               .Permit(Trigger.SearchCompleted, ConversationState.AskToSliceSelectedFile);
+
+            machine.Configure(ConversationState.AskToSliceSelectedFile)
+               .OnEntryAsync(async () => await SendMessageAsync("Möchtest du die Datei jetzt slicen und drucken?", CustomKeyboards.NoYesKeyboard))
+               .Permit(Trigger.SliceLater, ConversationState.Idle)
+               .Permit(Trigger.StartSlicing, ConversationState.Slicing);
+
 
             machine.Configure(ConversationState.Printing)
                .OnEntryAsync(async () => await SendMessageAsync("PRINT STARTED"));
@@ -212,7 +236,20 @@ namespace PrintAssistConsole
         private async Task StartSerachModelProcessAsync()
         {
             this.searchModelProcess = new SearchModelDialog(Id, bot);
+            searchModelProcess.SearchAborted += SearchModelProcess_SearchAborted;
+            searchModelProcess.SearchCompleted += SearchModelProcess_SearchCompleted;
             await searchModelProcess.StartAsync();
+        }
+
+        private async void SearchModelProcess_SearchCompleted(object sender, Tuple<string,string> NameAndUrl)
+        {
+            (modelName, selectedModelUrl) = NameAndUrl;
+            await machine.FireAsync(Trigger.SearchCompleted);
+        }
+
+        private void SearchModelProcess_SearchAborted(object sender, EventArgs e)
+        {
+            throw new NotImplementedException();
         }
 
         private async Task StartStartPrintProcessAsync()
@@ -229,7 +266,13 @@ namespace PrintAssistConsole
 
         private async Task StartSlicingAsync()
         {
-            this.slicingProcess = new SlicingProcess(Id, bot, selectedModel);
+            
+            if(selectedModelUrl.EndsWith(".stl"))
+            {
+                modelName = new Uri(selectedModelUrl).Segments[^1];
+            }
+            
+            this.slicingProcess = new SlicingProcess(Id, bot, selectedModelUrl, modelName);
             slicingProcess.SlicingProcessCompletedWithoutStartPrint += SlicingProcess_SlicingProcessWithoutCompleted;
             slicingProcess.SlicingProcessCompletedWithStartPrint += SlicingProcess_SlicingProcessCompletedWithStartPrint;
             await slicingProcess.StartAsync();
@@ -287,7 +330,7 @@ namespace PrintAssistConsole
         public async Task HandleUserInputAsync(Update update)
         {
            
-            if (update.Type == UpdateType.Message) //only react on normal messages, ignores edited messages.
+            if (update.Type == UpdateType.Message || update.Type == UpdateType.CallbackQuery) //only react on normal messages, ignores edited messages.
             {
                 switch (machine.State)
                 {
@@ -316,7 +359,7 @@ namespace PrintAssistConsole
 
                                 if (Path.GetExtension(update.Message.Document.FileName) == ".stl")
                                 {
-                                    selectedModel = Path.GetFullPath(path); // this should be done after the user confirmed to slice the file now.
+                                    selectedModelUrl = Path.GetFullPath(path); // this should be done after the user confirmed to slice the file now.
                                     await machine.FireAsync(Trigger.STLFileReceived);
                                 }
                                 else if (Path.GetExtension(update.Message.Document.FileName) == ".gcode")
@@ -463,21 +506,42 @@ namespace PrintAssistConsole
                             await searchModelProcess.HandleInputAsync(update);
                             break;
                         }
+                    case ConversationState.AskToSliceSelectedFile:
+                        {
+                            var intent = await IntentDetector.Instance.CallDFAPIAsync(Id, update.Message.Text, "AskToSliceFile"); //reuse the Yes No intents from the tutorial
+                            switch (intent)
+                            {
+                                case AskToSliceFileYes:
+                                    {
+                                        await machine.FireAsync(Trigger.StartSlicing);
+                                        break;
+                                    }
+                                case AskToSliceFileNo:
+                                    {
+                                        await SendMessageAsync("Okay, I will store it for you. You can ask me later to slice it.");
+                                        await machine.FireAsync(Trigger.Cancel);
+                                        break;
+                                    }
+                                default:
+                                    break;
+                            }
+                            break;
+                        }
                     default:
                         break;
                 }
             }
-            else if(update.Type == UpdateType.CallbackQuery)
-            {
-                if (searchModelProcess != null)
-                {
-                    await searchModelProcess.HandleCallbackQueryAsync(update);
-                }
+            //else if(update.Type == UpdateType.CallbackQuery)
+            //{
+            //    if (searchModelProcess != null)
+            //    {
+            //        await searchModelProcess.HandleCallbackQueryAsync(update);
+            //    }
                 
                 
 
 
-            }
+            //}
 
         }
 

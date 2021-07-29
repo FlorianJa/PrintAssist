@@ -18,6 +18,8 @@ namespace PrintAssistConsole
         Unknown,
         STLFileReceived,
         Printing,
-        SearchModel
+        SearchModel,
+        AskToSliceSelectedFile,
+        CollectDataForPrint
     }
 }
