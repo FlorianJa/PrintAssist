@@ -85,6 +85,11 @@ namespace PrintAssistConsole.ThingiverseAPI
                         {
                             var file = firstSTLFile.default_image?.sizes.FirstOrDefault(x => x.size == "large" && x.type == "display");
 
+                            if(file == null)
+                            {
+                                return new Tuple<int, string>(-1, null);
+                            }
+
                             url = file.url;
                             fileId = firstSTLFile.id;
                             return new Tuple<int, string>(fileId,url);

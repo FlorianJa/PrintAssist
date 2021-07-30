@@ -18,13 +18,17 @@ namespace PrintAssistConsole
 
     public enum CollectPrintInformationState : int
     {
-        BeforeStart = -1,
-        ConfirmingInput = 0,
-        EnteringObject = 1,
-        AskIfModelOrGcodeIsAvailable = 2,
-        StartSearchingModel = 3,
-        StartPrint = 4,
-        AskToSlice = 5,
+       Start = -1,
+       ConfirmInput = 0,
+       AskForFile = 1,
+       EnteringObjectName = 2,
+       SearchModel = 3,
+       ModelSelection = 4,
+       End = 5,
+       Abort = 6,
+        EndWithSTL = 7,
+        EndWithGcode = 8,
+        WaitForFile = 9
     }
 
 
@@ -33,20 +37,21 @@ namespace PrintAssistConsole
     {
         private enum Trigger
         {
-            Start,
-            Cancel,
-            SearchTermEntered,
-            RestartSearch,
-            ModelSelected,
-            AskForObject,
+            AskForFile,
             ConfirmInput,
             InputCorrect,
             InputIncorrect,
+            NoFile,
+            InputEntered,
+            AutoTransition,
+            NewSearchTerm,
+            FileAvailable,
+            Abort,
+            ModelSelected,
             STLFileAvailable,
             GCodeFileAvailable,
-            NoFile,
-            StartSearchingModel,
         }
+
         private CollectPrintInformationDialogDataProvider dialogData;
         private long id;
         private ITelegramBotClient bot;
@@ -55,10 +60,11 @@ namespace PrintAssistConsole
         private List<string> contexts;
         private List<string> dfContexts = new List<string>() { "PrintObjectRecognised" };
         private string selectedModelUrl;
+        private CollectPrintInformationState previousState;
 
-
-        public event EventHandler<string> StartPrintWithModel;
-        public event EventHandler<string> StartPrintWithoutModel;
+        public event EventHandler<string> StartModelSearch;
+        public event EventHandler<string> StartSlicing;
+        public event EventHandler<string> StartPrinting;
 
         public CollectPrintInformationDialog(long chatId, ITelegramBotClient bot, string printObject, List<string> contexts)
         {
@@ -68,54 +74,69 @@ namespace PrintAssistConsole
             this.printObject = new String(printObject);
             this.contexts = contexts;
             // Instantiate a new state machine in the Start state
-            machine = new StateMachine<CollectPrintInformationState, Trigger>(CollectPrintInformationState.BeforeStart);
+            machine = new StateMachine<CollectPrintInformationState, Trigger>(CollectPrintInformationState.Start);
 
             #region setup statemachine
             // Configure the before start state
-            machine.Configure(CollectPrintInformationState.BeforeStart)
-                .Permit(Trigger.AskForObject, CollectPrintInformationState.AskIfModelOrGcodeIsAvailable)
-                .Permit(Trigger.ConfirmInput, CollectPrintInformationState.ConfirmingInput);
+            machine.Configure(CollectPrintInformationState.Start)
+                .OnExit(() =>previousState = machine.State)
+                .Permit(Trigger.ConfirmInput, CollectPrintInformationState.ConfirmInput)
+                .Permit(Trigger.AskForFile, CollectPrintInformationState.AskForFile);
 
-            machine.Configure(CollectPrintInformationState.EnteringObject)
-                .OnEntryAsync(async () => await SendMessageAsync("Was möchtest du drucken?", new ReplyKeyboardRemove()))
-                .Permit(Trigger.ConfirmInput, CollectPrintInformationState.ConfirmingInput);
+            machine.Configure(CollectPrintInformationState.ConfirmInput)
+                .OnEntryAsync(SendConfirmationQuestionAsync)
+                .OnExit(() => previousState = machine.State)
+                .PermitDynamic(Trigger.InputCorrect,  () =>{ return previousState == CollectPrintInformationState.Start ? CollectPrintInformationState.AskForFile : CollectPrintInformationState.SearchModel;})
+                .Permit(Trigger.InputIncorrect, CollectPrintInformationState.EnteringObjectName);
 
-            machine.Configure(CollectPrintInformationState.ConfirmingInput)
-                .OnEntryAsync(async () => await SendConfirmationQuestionAsync())
-                .Permit(Trigger.InputCorrect, CollectPrintInformationState.StartSearchingModel)
-                .Permit(Trigger.InputIncorrect, CollectPrintInformationState.EnteringObject);
-
-            machine.Configure(CollectPrintInformationState.AskIfModelOrGcodeIsAvailable)
+            machine.Configure(CollectPrintInformationState.AskForFile)
                 .OnEntryAsync(async () => await SendMessageAsync("Hast du schon ein 3D Modell oder eine geslicte Datei? Wenn ja, kannst du sie mir einfach schicken.", CustomKeyboards.NoYesKeyboard))
-                .Permit(Trigger.STLFileAvailable, CollectPrintInformationState.AskToSlice)
-                .Permit(Trigger.GCodeFileAvailable, CollectPrintInformationState.StartPrint)
-                .Permit(Trigger.NoFile, CollectPrintInformationState.EnteringObject);
+                .OnExit(() => previousState = machine.State)
+                .PermitDynamic(Trigger.NoFile, () => { return previousState == CollectPrintInformationState.ConfirmInput ? CollectPrintInformationState.SearchModel : CollectPrintInformationState.EnteringObjectName; })
+                .Permit(Trigger.FileAvailable, CollectPrintInformationState.WaitForFile)
+                .Permit(Trigger.STLFileAvailable, CollectPrintInformationState.EndWithSTL)
+                .Permit(Trigger.GCodeFileAvailable, CollectPrintInformationState.EndWithGcode);
 
+            machine.Configure(CollectPrintInformationState.EnteringObjectName)
+                .OnEntryFromAsync(Trigger.NoFile, async () => await SendMessageAsync("Was möchtest du drucken?"))
+                .OnEntryFromAsync(Trigger.InputCorrect, async () => await SendMessageAsync("Was möchtest du drucken?"))
+                .OnEntryFromAsync(Trigger.NewSearchTerm, async () => await SendMessageAsync("Bitte gib einen neuen Suchbegriff ein"))
+                .OnExit(() => previousState = machine.State)
+                .Permit(Trigger.InputEntered, CollectPrintInformationState.ConfirmInput);
 
-            machine.Configure(CollectPrintInformationState.AskToSlice)
-                .OnEntry(() => InvokeStartPrintWithModelEvent());
+            machine.Configure(CollectPrintInformationState.SearchModel)
+                .OnEntry( () => StartSearchDialog())
+                .OnExit(() => previousState = machine.State)
+                .Permit(Trigger.AutoTransition, CollectPrintInformationState.End);
 
-            machine.Configure(CollectPrintInformationState.StartSearchingModel)
-                .OnEntry(() => InvokeStartPrintWithoutModelEvent());
+            machine.Configure(CollectPrintInformationState.Abort);
+
+            machine.Configure(CollectPrintInformationState.EndWithSTL)
+                .OnEntry(() => StartSlicing?.Invoke(this, selectedModelUrl));
+
+            machine.Configure(CollectPrintInformationState.EndWithGcode)
+                .OnEntry(() => StartPrinting?.Invoke(this, selectedModelUrl));
+
+            machine.Configure(CollectPrintInformationState.WaitForFile)
+                .OnEntryAsync(async () => await SendMessageAsync("Okay. Schick mir bitte die Datei.", new ReplyKeyboardRemove()));
+
             #endregion
 
         }
 
-        private void InvokeStartPrintWithoutModelEvent()
+        private void StartSearchDialog()
         {
-            StartPrintWithoutModel?.Invoke(this, printObject);
+            StartModelSearch?.Invoke(this, printObject);
         }
 
-        private void InvokeStartPrintWithModelEvent()
-        {
-            StartPrintWithModel?.Invoke(this, selectedModelUrl);
-        }
 
         private async Task SendConfirmationQuestionAsync()
         {
             var message = $"Du möchtest *{printObject}* drucken. Habe ich dich richtig verstanden?";
             await SendMessageAsync(message,CustomKeyboards.NoYesKeyboard, ParseMode.Markdown);
         }
+
+        
 
         public async Task HandleInputAsync(Update update)
         {
@@ -135,9 +156,9 @@ namespace PrintAssistConsole
 
             switch (machine.State)
             {
-                case CollectPrintInformationState.BeforeStart:
+                case CollectPrintInformationState.Start:
                     break;
-                case CollectPrintInformationState.ConfirmingInput:
+                case CollectPrintInformationState.ConfirmInput:
                     {
                         var intent = await IntentDetector.Instance.CallDFAPIAsync(id, update.Message.Text, dfContexts, false);
                         switch (intent)
@@ -157,7 +178,7 @@ namespace PrintAssistConsole
                         }
                         break;
                     }
-                case CollectPrintInformationState.EnteringObject:
+                case CollectPrintInformationState.EnteringObjectName:
                     {
                         //printObject = update.Message.Text;
 
@@ -172,11 +193,11 @@ namespace PrintAssistConsole
                             }
                         }
 
-                        await machine.FireAsync(Trigger.ConfirmInput);
+                        await machine.FireAsync(Trigger.InputEntered);
                         break;
                     }
 
-                case CollectPrintInformationState.AskIfModelOrGcodeIsAvailable:
+                case CollectPrintInformationState.AskForFile:
                     {
 
                         if(update.Message.Document != null)
@@ -216,7 +237,8 @@ namespace PrintAssistConsole
                             {
                                 case PrintObjectRecognisedYes:
                                     {
-                                        await SendMessageAsync("Okay. Schick mir die Datei bitte zu.", new ReplyKeyboardRemove());
+                                        //await SendMessageAsync("Okay. Schick mir die Datei bitte zu.", new ReplyKeyboardRemove());
+                                        await machine.FireAsync(Trigger.FileAvailable);
                                         break;
                                     }
                                 case PrintObjectRecognisedNo:
@@ -230,13 +252,40 @@ namespace PrintAssistConsole
                             }
 
                         }
-                        //stl file
+                        break;
+                    }
+                case CollectPrintInformationState.WaitForFile:
+                    {
+                        if (update.Message.Document != null)
+                        {
+                            if (update.Message.Document.FileSize >= 20000000) //20MB
+                            {
+                                await SendMessageAsync("Die Datei ist leider zu groß für mich. Ich unterstütze aktuell nur Dateien mit bis zu 20 MB");
+                                return;
+                            }
+                            var path = update.Message.Document.FileName;
 
-                        //gcode file
+                            using FileStream fileStream = new FileStream(path, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Write);
+                            {
+                                var tmp = await bot.GetInfoAndDownloadFileAsync(update.Message.Document.FileId, fileStream);
+                            }
 
-                        // no file
-
-
+                            if (Path.GetExtension(update.Message.Document.FileName) == ".stl")
+                            {
+                                selectedModelUrl = Path.GetFullPath(path);
+                                await machine.FireAsync(Trigger.STLFileAvailable);
+                            }
+                            else if (Path.GetExtension(update.Message.Document.FileName) == ".gcode")
+                            {
+                                selectedModelUrl = Path.GetFullPath(path);
+                                await SendMessageAsync("got gcode");
+                                await machine.FireAsync(Trigger.GCodeFileAvailable);
+                            }
+                            else
+                            {
+                                await SendMessageAsync("other file");
+                            }
+                        }
                         break;
                     }
                 default:
@@ -372,7 +421,7 @@ namespace PrintAssistConsole
         {
             if(string.IsNullOrEmpty(printObject))
             {
-                await machine.FireAsync(Trigger.AskForObject);
+                await machine.FireAsync(Trigger.AskForFile);
             }
             else
             {

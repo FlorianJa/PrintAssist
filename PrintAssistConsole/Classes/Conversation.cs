@@ -21,7 +21,8 @@ namespace PrintAssistConsole
             {
                 return new ReplyKeyboardMarkup(
                             new KeyboardButton[] { "Nein", "Ja" },
-                            resizeKeyboard: true
+                            resizeKeyboard: true,
+                            oneTimeKeyboard: true
                         );
             }
         }
@@ -247,9 +248,16 @@ namespace PrintAssistConsole
         private async Task StartCollectingDataForPrintingAsync()
         {
             collectingDataForPrintingDialog = new CollectPrintInformationDialog(Id, bot, printObject, contexts);
-            collectingDataForPrintingDialog.StartPrintWithModel += CollectingDataForPrintingDialog_StartPrintWithModel;
-            collectingDataForPrintingDialog.StartPrintWithoutModel += CollectingDataForPrintingDialog_StartPrintWithoutModel;
+            collectingDataForPrintingDialog.StartModelSearch += CollectingDataForPrintingDialog_StartModelSearch;
+            //collectingDataForPrintingDialog.StartPrintWithModel += CollectingDataForPrintingDialog_StartPrintWithModel;
+            //collectingDataForPrintingDialog.StartPrintWithoutModel += CollectingDataForPrintingDialog_StartPrintWithoutModel;
             await collectingDataForPrintingDialog.StartAsync();
+        }
+
+        private async void CollectingDataForPrintingDialog_StartModelSearch(object sender, string e)
+        {
+            printObject = e;
+            await StartSearchModelProcessAsync();
         }
 
         private async void CollectingDataForPrintingDialog_StartPrintWithoutModel(object sender, string e)
@@ -583,7 +591,7 @@ namespace PrintAssistConsole
                                     {
                                         //await SendMessageAsync("Okay, I will store it for you. You can ask me later to slice it.");
                                         await SendMessageAsync("Okay, ich passe auf die Datei auf. Du kannst mich später nochmal fragen.");
-                                        await machine.FireAsync(Trigger.Cancel);
+                                        await machine.FireAsync(Trigger.SliceLater);
                                         break;
                                     }
                                 default:
