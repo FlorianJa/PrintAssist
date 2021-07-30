@@ -256,8 +256,10 @@ namespace PrintAssistConsole
 
         private async void CollectingDataForPrintingDialog_StartModelSearch(object sender, string e)
         {
+
             printObject = e;
-            await StartSearchModelProcessAsync();
+            await machine.FireAsync(Trigger.SearchModel);
+            //await StartSearchModelProcessAsync();
         }
 
         private async void CollectingDataForPrintingDialog_StartPrintWithoutModel(object sender, string e)

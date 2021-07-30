@@ -44,7 +44,7 @@ namespace PrintAssistConsole
             NoFile,
             InputEntered,
             AutoTransition,
-            NewSearchTerm,
+            NewSearchTerm, // delete
             FileAvailable,
             Abort,
             ModelSelected,

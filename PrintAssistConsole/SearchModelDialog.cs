@@ -18,10 +18,11 @@ namespace PrintAssistConsole
 {
     public enum SearchModelState : int
     {
-        BeforeStart = -1,
+        Start = -1,
         EnteringSearchTerm = 0,
-        ModelSelection = 1,
-        SearchCompleted = 2,
+        StartSearch = 1,
+        ModelSelection = 2,
+        SearchCompleted = 3,
     }
 
     public class SearchModelDialog
@@ -35,6 +36,12 @@ namespace PrintAssistConsole
             SearchTermEntered,
             RestartSearch,
             ModelSelected,
+            NoHits,
+            StartSearch,
+            EnteringName,
+            InputEntered,
+            AutoTranstion,
+            NewSearchTerm
         }
         private SearchModelDialogDataProvider dialogData;
         private long id;
@@ -64,35 +71,58 @@ namespace PrintAssistConsole
             dialogData = new SearchModelDialogDataProvider();
             this.searchTerm = searchTerm;
             // Instantiate a new state machine in the Start state
-            machine = new StateMachine<SearchModelState, Trigger>(SearchModelState.BeforeStart);
+            machine = new StateMachine<SearchModelState, Trigger>(SearchModelState.Start);
 
             #region setup statemachine
             // Configure the before start state
-            machine.Configure(SearchModelState.BeforeStart)
-                //.OnExitAsync(async () => await SendMessageAsync(machine.State))
-                .Permit(Trigger.Start, SearchModelState.EnteringSearchTerm)
-                .Permit(Trigger.SearchTermEntered, SearchModelState.ModelSelection);
+            machine.Configure(SearchModelState.Start)
+                .Permit(Trigger.StartSearch, SearchModelState.StartSearch)
+                .Permit(Trigger.EnteringName, SearchModelState.EnteringSearchTerm);
 
             machine.Configure(SearchModelState.EnteringSearchTerm)
-                .OnEntryAsync(async () => await SendMessageAsync(machine.State))
-                .Permit(Trigger.SearchTermEntered, SearchModelState.ModelSelection);
+                //.OnEntryAsync(async () => await SendMessageAsync(machine.State))
+                .Permit(Trigger.InputEntered, SearchModelState.StartSearch);
+
+            machine.Configure(SearchModelState.StartSearch)
+                .OnEntryAsync(StartSearch)
+                .Permit(Trigger.NoHits, SearchModelState.EnteringSearchTerm)
+                .Permit(Trigger.AutoTranstion, SearchModelState.ModelSelection);
 
             machine.Configure(SearchModelState.ModelSelection)
-                .Permit(Trigger.RestartSearch, SearchModelState.EnteringSearchTerm)
-                .Permit(Trigger.ModelSelected, SearchModelState.SearchCompleted);
+                .Permit(Trigger.ModelSelected, SearchModelState.SearchCompleted)
+                .Permit(Trigger.NewSearchTerm, SearchModelState.EnteringSearchTerm);
+
 
             machine.Configure(SearchModelState.SearchCompleted)
                 .OnEntry(() => SearchCompleted(this, new Tuple<string,string>(modelName,modelUrl)));
             #endregion
         }
 
+        private async Task StartSearch()
+        {
+            await SendMessageAsync($"Ok, ich suche nach: *{searchTerm}*", ParseMode.Markdown);
+            things = await ThingiverseAPIWrapper.SearchThingsAsync(searchTerm, currentSearchPage, pageCount);
+            if (things != null)
+            {
+                await SendMessageAsync($"Ich habe {things.TotalHits} Ergebnisse gefunden. Benutze die Pfeil-Buttons unter dem Bild um durch die Suchergebnisse zu navigieren. Wenn dir ein Modell gefällt, klicke auf \"Auswählen\".", CustomKeyboards.AbortSearchNewSearchTermKeyboard);
+                currentImage = 0;
+                (fileId, imageUrl) = await ThingiverseAPIWrapper.GetImageURLByThingId(things.Hits[0].Id);
+                var tmp = await bot.SendPhotoAsync(chatId: id, photo: new InputOnlineFile(new Uri(imageUrl)), caption: things.Hits[currentImage].Name, replyMarkup: CustomKeyboards.SelectNextInlineKeyboard);
+                selectionMessageId = tmp.MessageId;
+                await machine.FireAsync(Trigger.AutoTranstion);
+            }
+            else
+            {
+                await SendMessageAsync($"Ich habe keine Ergebnisse für *{searchTerm}* gefunden. Probier es mit einem anderen Begriff", ParseMode.Markdown);
+            }
+        }
 
         public async Task HandleInputAsync(Update update)
         {
 
             switch (machine.State)
             {
-                case SearchModelState.BeforeStart:
+                case SearchModelState.Start:
                     break;
                 case SearchModelState.EnteringSearchTerm:
                     {
@@ -116,7 +146,7 @@ namespace PrintAssistConsole
                                     {
                                         await bot.EditMessageReplyMarkupAsync(id, selectionMessageId);
                                         await SendMessageAsync("Okay.", new ReplyKeyboardRemove());
-                                        await machine.FireAsync(Trigger.RestartSearch);
+                                        await machine.FireAsync(Trigger.NewSearchTerm);
                                         break;
                                     }
                                 case AbortSearch:
@@ -137,58 +167,8 @@ namespace PrintAssistConsole
             }
         }
 
-        //private async Task InitalThingiverseAPIReqeustAsync()
-        //{
-            
-        //    await SendMessageAsync($"Ok, ich suche nach: *{searchTerm}*", ParseMode.Markdown);
-
-        //    things = await ThingiverseAPIWrapper.SearchThingsAsync(searchTerm, currentSearchPage, pageCount);
-        //    if (things != null)
-        //    {
-        //        await SendMessageAsync($"Ich habe {things.TotalHits} Ergebnisse gefunden. Benutze die Pfeil-Buttons unter dem Bild um durch die Suchergebnisse zu navigieren. Wenn dir ein Modell gefällt, klicke auf \"Auswählen\".", CustomKeyboards.AbortSearchNewSearchTermKeyboard);
-        //        currentImage = 0;
-
-        //        (fileId, imageUrl) = await ThingiverseAPIWrapper.GetImageURLByThingId(things.Hits[0].Id);
-
-
-        //        var tmp = await bot.SendPhotoAsync(chatId: id, photo: new InputOnlineFile(new Uri(imageUrl)), caption: things.Hits[currentImage].Name, replyMarkup: CustomKeyboards.SelectNextInlineKeyboard);
-        //        selectionMessageId = tmp.MessageId;
-        //    }
-        //    else
-        //    {
-        //        await SendMessageAsync($"Ich habe keine Ergebnisse für *{searchTerm}* gefunden. Probier es mit einem anderen Begriff", ParseMode.Markdown);
-        //    }
-
-        //    await machine.FireAsync(Trigger.SearchTermEntered);
-        //}
-
-        private async Task<int> GetTotalHits(string searchTerm)
-        {
-
-            //await SendMessageAsync($"Ok, ich suche nach: *{searchTerm}*", ParseMode.Markdown);
-
-            things = await ThingiverseAPIWrapper.SearchThingsAsync(searchTerm, currentSearchPage, pageCount);
-            return things.TotalHits;
-            //if (things != null)
-            //{
-            //    await SendMessageAsync($"Ich habe {things.TotalHits} Ergebnisse gefunden. Benutze die Pfeil-Buttons unter dem Bild um durch die Suchergebnisse zu navigieren. Wenn dir ein Modell gefällt, klicke auf \"Auswählen\".", CustomKeyboards.AbortSearchNewSearchTermKeyboard);
-            //    currentImage = 0;
-
-            //    (fileId, imageUrl) = await ThingiverseAPIWrapper.GetImageURLByThingId(things.Hits[0].Id);
-
-
-            //    var tmp = await bot.SendPhotoAsync(chatId: id, photo: new InputOnlineFile(new Uri(imageUrl)), caption: things.Hits[currentImage].Name, replyMarkup: CustomKeyboards.SelectNextInlineKeyboard);
-            //    selectionMessageId = tmp.MessageId;
-            //}
-            //else
-            //{
-            //    await SendMessageAsync($"Ich habe keine Ergebnisse für *{searchTerm}* gefunden. Probier es mit einem anderen Begriff", ParseMode.Markdown);
-            //}
-
-            //await machine.FireAsync(Trigger.SearchTermEntered);
-        }
-
-
+        
+       
         internal async Task HandleCallbackQueryAsync(Update update)
         {
             await bot.AnswerCallbackQueryAsync(update.CallbackQuery.Id);
@@ -380,12 +360,11 @@ namespace PrintAssistConsole
         {
             if (string.IsNullOrEmpty(searchTerm))
             {
-                await machine.FireAsync(Trigger.Start);
+                await machine.FireAsync(Trigger.EnteringName);
             }
             else
             {
-                //await ThingiverseAPIReqeustAsync();
-                //await machine.FireAsync(Trigger.SearchTermEntered);
+                await machine.FireAsync(Trigger.StartSearch);
             }
 
 
