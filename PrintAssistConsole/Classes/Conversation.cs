@@ -249,9 +249,22 @@ namespace PrintAssistConsole
         {
             collectingDataForPrintingDialog = new CollectPrintInformationDialog(Id, bot, printObject, contexts);
             collectingDataForPrintingDialog.StartModelSearch += CollectingDataForPrintingDialog_StartModelSearch;
+            collectingDataForPrintingDialog.StartSlicing += CollectingDataForPrintingDialog_StartSlicing;
+            collectingDataForPrintingDialog.StartPrinting += CollectingDataForPrintingDialog_StartPrinting;
             //collectingDataForPrintingDialog.StartPrintWithModel += CollectingDataForPrintingDialog_StartPrintWithModel;
             //collectingDataForPrintingDialog.StartPrintWithoutModel += CollectingDataForPrintingDialog_StartPrintWithoutModel;
             await collectingDataForPrintingDialog.StartAsync();
+        }
+
+        private void CollectingDataForPrintingDialog_StartPrinting(object sender, string e)
+        {
+            throw new NotImplementedException();
+        }
+
+        private async void CollectingDataForPrintingDialog_StartSlicing(object sender, string e)
+        {
+            selectedModelUrl = e;
+            await machine.FireAsync(Trigger.StartSlicing);
         }
 
         private async void CollectingDataForPrintingDialog_StartModelSearch(object sender, string e)

@@ -118,7 +118,9 @@ namespace PrintAssistConsole
                 .OnEntry(() => StartPrinting?.Invoke(this, selectedModelUrl));
 
             machine.Configure(CollectPrintInformationState.WaitForFile)
-                .OnEntryAsync(async () => await SendMessageAsync("Okay. Schick mir bitte die Datei.", new ReplyKeyboardRemove()));
+                .OnEntryAsync(async () => await SendMessageAsync("Okay. Schick mir bitte die Datei.", new ReplyKeyboardRemove()))
+                .Permit(Trigger.STLFileAvailable, CollectPrintInformationState.EndWithSTL)
+                .Permit(Trigger.GCodeFileAvailable, CollectPrintInformationState.EndWithGcode);
 
             #endregion
 
