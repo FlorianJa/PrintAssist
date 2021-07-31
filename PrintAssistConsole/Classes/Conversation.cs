@@ -1,4 +1,5 @@
-﻿using OctoPrintConnector;
+﻿using Humanizer;
+using OctoPrintConnector;
 using PrintAssistConsole.Intents;
 using Stateless;
 using System;
@@ -629,6 +630,35 @@ namespace PrintAssistConsole
                     case ConversationState.CollectDataForPrint:
                         {
                             await collectingDataForPrintingDialog.HandleInputAsync(update);
+                            break;
+                        }
+                    case ConversationState.Printing:
+                        {
+                            var intent = await IntentDetector.Instance.CallDFAPIAsync(Id, update.Message.Text, "Printing");
+
+                            switch (intent)
+                            {
+                                case PrintStatus:
+                                    {
+                                        var snapshot = await octoprinServer.GeneralOperations.GetSnapShotAsync();
+
+                                        await bot.SendPhotoAsync(Id, new Telegram.Bot.Types.InputFiles.InputOnlineFile(snapshot));
+
+                                        var jobinfo = await octoprinServer.JobOpertations.GetJobInformationAsync();
+                                        var message = "Aktueller Status:" + Environment.NewLine +
+                                                      $"Fortschritt: {jobinfo.progress.completion:F0}%" + Environment.NewLine;
+                                        
+                                        if (jobinfo.progress.printTimeLeft.HasValue)
+                                        {
+                                            message += $"Restliche Druckdauer: {TimeSpan.FromSeconds(jobinfo.progress.printTimeLeft.Value).Humanize()}";
+                                        }
+
+                                        await SendMessageAsync(message);
+                                        break;
+                                    }
+                                default:
+                                    break;
+                            }
                             break;
                         }
                     default:

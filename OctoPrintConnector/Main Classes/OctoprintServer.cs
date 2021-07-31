@@ -251,6 +251,9 @@ namespace OctoPrintConnector
                 default: return MessageType.Unknown;
             }
         }
+
+        
+        
     }
 
     public enum MessageType
