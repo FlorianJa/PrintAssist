@@ -61,5 +61,13 @@
   20: {
     "text": "Sollen Supportstrukturen aktiviert werden?",
     "KeyboardButtons": [ [ "Ja", "Nein" ] ]
+  },
+  21: {
+    "text": "Möchtest du noch weitere Paramter einstellen?",
+    "KeyboardButtons": [ [ "Ja", "Nein" ] ]
+  },
+  22: {
+    "text": "Diese Funktion ist leider noch nicht implentiert, kommt aber bald :)",
+    "KeyboardButtons": [ [ "Okay" ] ]
   }
 }

@@ -43,6 +43,8 @@ namespace PrintAssistConsole
         GuidedModeDetails,
         SelectingPreset,
         AdvancedSupport,
+        MoreParameters,
+        NotImplemented,
     }
 
     public class SlicingProcess
@@ -80,12 +82,10 @@ namespace PrintAssistConsole
         private bool objectHasOverhangs;
         private bool objectHasFineDetails;
         private bool objectNeedsToHandleMechanicalForces;
-        private string slicingProfile;
         private PrusaSlicerCLICommands cliCommands = null;
         private string modelName;
         private int counter;
         private int progessMessageId;
-        private long fromId;
         private Timer Timer;
         private List<string> Profiles = new List<string>()
         {
@@ -137,7 +137,7 @@ namespace PrintAssistConsole
 
             machine.Configure(SlicingProcessState.AdvancedSupport)
                 .OnEntryAsync(async () => await SendMessageAsync(machine.State))
-                .Permit(Trigger.AdvancedSupportEntered, SlicingProcessState.SlicingServiceStarted);
+                .Permit(Trigger.AdvancedSupportEntered, SlicingProcessState.MoreParameters);
 
             machine.Configure(SlicingProcessState.ExpertModeLayerHeight)
                 .OnEntryAsync(async () => await SendMessageAsync(machine.State))
@@ -152,7 +152,17 @@ namespace PrintAssistConsole
             machine.Configure(SlicingProcessState.ExpertModeSupport)
                 .OnEntryAsync(async () => await SendMessageAsync(machine.State))
                 .OnExitAsync(async () => await SendMessageAsync($"Support = {supportMaterial}"))
+                .Permit(Trigger.Next, SlicingProcessState.MoreParameters);
+
+            machine.Configure(SlicingProcessState.MoreParameters)
+                .OnEntryAsync(async () => await SendMessageAsync(machine.State))
+                .Permit(Trigger.Yes, SlicingProcessState.NotImplemented)
+                .Permit(Trigger.No, SlicingProcessState.SlicingServiceStarted);
+
+            machine.Configure(SlicingProcessState.NotImplemented)
+                .OnEntryAsync(async () => { await SendMessageAsync(machine.State);})
                 .Permit(Trigger.Next, SlicingProcessState.SlicingServiceStarted);
+
 
             machine.Configure(SlicingProcessState.SlicingServiceStarted)
                 .OnEntryAsync(async () => { await SendMessageAsync(machine.State); await CallSlicingService(); })
@@ -304,7 +314,6 @@ namespace PrintAssistConsole
 
             var message = await bot.SendTextMessageAsync(id, "Slicing läuft");
             progessMessageId = message.MessageId;
-            fromId = message.Chat.Id;
 
 
             Timer = new Timer();
@@ -508,6 +517,46 @@ namespace PrintAssistConsole
                                 break;
                         }
                         await machine.FireAsync(Trigger.AdvancedSupportEntered);
+                        break;
+                    }
+                case SlicingProcessState.MoreParameters:
+                    {
+                        var intent = await IntentDetector.Instance.CallDFAPIAsync(id, update.Message.Text, "TutorialStarten-followup"); //reuse the Yes No intents from the tutorial
+                        switch (intent)
+                        {
+                            case TutorialYes:
+                                {
+                                    await machine.FireAsync(Trigger.Yes);
+                                    break;
+                                }
+                            case TutorialNo:
+                                {
+                                    await machine.FireAsync(Trigger.No);
+                                    break;
+                                }
+                            default:
+                                break;
+                        }
+                        break;
+                    }
+                case SlicingProcessState.NotImplemented:
+                    {
+                        var intent = await IntentDetector.Instance.CallDFAPIAsync(id, update.Message.Text, "TutorialStarten-followup"); //reuse the Yes No intents from the tutorial
+                        switch (intent)
+                        {
+                            case TutorialNext:
+                                {
+                                    await machine.FireAsync(Trigger.Next);
+                                    break;
+                                }
+                            case DefaultFallbackIntent fallback:
+                                {
+                                    fallback.Process();
+                                    break;
+                                }
+                            default:
+                                break;
+                        }
                         break;
                     }
                 case SlicingProcessState.ExpertModeLayerHeight:

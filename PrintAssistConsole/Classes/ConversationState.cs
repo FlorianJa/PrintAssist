@@ -20,6 +20,7 @@ namespace PrintAssistConsole
         Printing,
         SearchModel,
         AskToSliceSelectedFile,
-        CollectDataForPrint
+        CollectDataForPrint,
+        HardwareTutorialFinished
     }
 }

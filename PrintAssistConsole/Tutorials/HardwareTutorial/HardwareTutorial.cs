@@ -30,7 +30,7 @@ namespace PrintAssistConsole
 
        
         private readonly StateMachine<HardwareTutorialState, Trigger> machine;
-
+        public event EventHandler TutorialFinished;
 
         public HardwareTutorial(long chatId, ITelegramBotClient bot, ITutorialDataProvider tutorialData) : base(chatId, bot, tutorialData)
         {
@@ -86,7 +86,7 @@ namespace PrintAssistConsole
 
             // Configure the End state
             machine.Configure(HardwareTutorialState.End)
-                .OnEntryAsync(async () => await SendMessageAsync(machine.State));
+                .OnEntryAsync(async () => { await SendMessageAsync(machine.State); TutorialFinished?.Invoke(this, null); });
 
             // Configure the Cancel state
             machine.Configure(HardwareTutorialState.Cancel)

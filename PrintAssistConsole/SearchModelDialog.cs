@@ -80,7 +80,7 @@ namespace PrintAssistConsole
                 .Permit(Trigger.EnteringName, SearchModelState.EnteringSearchTerm);
 
             machine.Configure(SearchModelState.EnteringSearchTerm)
-                //.OnEntryAsync(async () => await SendMessageAsync(machine.State))
+                .OnEntryAsync(async () => await SendMessageAsync(machine.State))
                 .Permit(Trigger.InputEntered, SearchModelState.StartSearch);
 
             machine.Configure(SearchModelState.StartSearch)
@@ -127,7 +127,7 @@ namespace PrintAssistConsole
                 case SearchModelState.EnteringSearchTerm:
                     {
                         searchTerm = update.Message.Text;
-                        //await ThingiverseAPIReqeustAsync();
+                        await machine.FireAsync(Trigger.InputEntered);
                         break;
                     }
                 case SearchModelState.ModelSelection:

@@ -117,9 +117,15 @@ namespace PrintAssistConsole
 
             machine.Configure(ConversationState.HardwareTutorial)
                 .OnEntryAsync(async () => await StartHardwareTutorialAsync())
-                .Permit(Trigger.HardwareTutorialFinished, ConversationState.Idle)
+                .Permit(Trigger.HardwareTutorialFinished, ConversationState.HardwareTutorialFinished)
                 .Permit(Trigger.StartWorkflowTutorial, ConversationState.WorkflowTutorial)
                 .Permit(Trigger.HardwareTutorialCanceled, ConversationState.Idle);
+
+            machine.Configure(ConversationState.HardwareTutorialFinished)
+               //.OnEntryAsync(async () => await StartHardwareTutorialAsync())
+               //.Permit(Trigger.HardwareTutorialFinished, ConversationState.HardwareTutorialFinished)
+               .Permit(Trigger.StartWorkflowTutorial, ConversationState.WorkflowTutorial)
+               .Permit(Trigger.HardwareTutorialFinished, ConversationState.Idle);
 
             machine.Configure(ConversationState.WorkflowTutorial)
                 .OnEntryAsync(async () => await StartWorkflowTutorialAsync())
@@ -380,7 +386,13 @@ namespace PrintAssistConsole
             ITutorialDataProvider data = new HardwareTutorialDataProvider();
             var tutorial = new HardwareTutorial(Id, bot, data);
             this.tutorial = tutorial;
+            tutorial.TutorialFinished += Tutorial_TutorialFinished;
             await tutorial.StartAsync();
+        }
+
+        private async void Tutorial_TutorialFinished(object sender, EventArgs e)
+        {
+            await machine.FireAsync(Trigger.HardwareTutorialFinished);
         }
 
         private async Task SendGreetingWithNameAsync()
@@ -391,7 +403,7 @@ namespace PrintAssistConsole
         private async Task SendWelcomeMessageAsync()
         {
             //await SendMessageAsync("Hi I am your print assistant. I can do stuff for you. How should i call you?");
-            await SendMessageAsync("Hi. Ich bin dein persönlicher Druckassistent. Ich kann XXX für dich tun. Wie soll ich dich nennen?");
+            await SendMessageAsync("Hi. Ich bin dein persönlicher Druckassistent. Ich kann dir den Drucker und den 3D Druck Workflow erklären, 3D Modelle für den Drucker vorbereiten und den Druck starten. Wie soll ich dich nennen?");
         }
         private async Task<Telegram.Bot.Types.Message> SendMessageAsync(string text, IReplyMarkup replyKeyboardMarkup = null)
         {
@@ -495,6 +507,17 @@ namespace PrintAssistConsole
                                             await machine.FireAsync(Trigger.StartPrint);
                                             break;
                                         }
+                                    case SkillInformation skillIntent:
+                                        {
+                                            await SendMessageAsync(skillIntent.Process());
+                                            break;
+                                        }
+                                    case SearchModel:
+                                        {
+                                            printObject = null;
+                                            await machine.FireAsync(Trigger.SearchModel);
+                                            break;
+                                        }
                                     default:
                                         await SendMessageAsync("Intent detected:" + intent.GetType() + ". There is no implementation for this intent yet.");
                                         break;
@@ -518,6 +541,24 @@ namespace PrintAssistConsole
                                         await machine.FireAsync(Trigger.HardwareTutorialCanceled);
                                         break;
                                     }
+                                case DefaultFallbackIntent defaultIntent:
+                                    {
+                                        await SendMessageAsync(defaultIntent.Process(), new ReplyKeyboardMarkup(
+                                                                                        new KeyboardButton[] { "Erklärung abbrechen", "Weiter" },
+                                                                                        resizeKeyboard: true));
+                                        break;
+                                    }
+                                default:
+                                    break;
+                            }
+
+                            break;
+                        }
+                    case ConversationState.HardwareTutorialFinished:
+                        {
+                            var intent = await IntentDetector.Instance.CallDFAPIAsync(Id, update.Message.Text, "TutorialStarten-followup");
+                            switch (intent)
+                            {
                                 case TutorialYes yes:
                                     {
                                         await machine.FireAsync(Trigger.StartWorkflowTutorial);
@@ -527,13 +568,6 @@ namespace PrintAssistConsole
                                     {
                                         await SendMessageAsync("Okay.");
                                         await machine.FireAsync(Trigger.HardwareTutorialFinished);
-                                        break;
-                                    }
-                                case DefaultFallbackIntent defaultIntent:
-                                    {
-                                        await SendMessageAsync(defaultIntent.Process(), new ReplyKeyboardMarkup(
-                                                                                        new KeyboardButton[] { "Erklärung abbrechen", "Weiter" },
-                                                                                        resizeKeyboard: true));
                                         break;
                                     }
                                 default:

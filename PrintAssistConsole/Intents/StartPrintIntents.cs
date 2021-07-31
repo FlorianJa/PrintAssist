@@ -129,7 +129,7 @@ namespace PrintAssistConsole.Intents
         }
     }
     
-    [IntentAttribute("StartPrintProcdure.Start")]
+    [IntentAttribute("StartPrintProcedure.Start")]
     public class StartProcedure : BaseIntent
     {
         public override string Process()

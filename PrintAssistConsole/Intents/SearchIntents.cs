@@ -42,4 +42,15 @@ namespace PrintAssistConsole.Intents
             throw new NotImplementedException();
         }
     }
+
+    [IntentAttribute("SearchModel")]
+    public class SearchModel : BaseIntent
+    {
+        public override string Process()
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    
 }
