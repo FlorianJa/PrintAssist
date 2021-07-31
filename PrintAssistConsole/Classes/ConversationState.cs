@@ -14,7 +14,7 @@ namespace PrintAssistConsole
         SendStlFile,
         SendGcodeFile,
         Slicing,
-        StartingPrint,
+        CheckBeforePrint,
         Unknown,
         STLFileReceived,
         Printing,

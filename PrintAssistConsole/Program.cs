@@ -53,6 +53,20 @@ namespace PrintAssistConsole
             thingiverseToken = configuration.GetValue<string>("ThingiverseToken");
             ThingiverseAPIWrapper.Token = thingiverseToken;
 
+            var modelPath = configuration.GetValue<string>("ModelPath");
+            var gcodePath = configuration.GetValue<string>("GcodePath");
+
+            if (!Directory.Exists(gcodePath))
+            {
+                Directory.CreateDirectory(gcodePath);
+            }
+
+            if (!Directory.Exists(modelPath))
+            {
+                Directory.CreateDirectory(modelPath);
+            }
+
+
             conversations = new RamConversationRepo();
 
             await IntentDetector.CreateAsync(agentId, dialogFlowAPIKeyFile);

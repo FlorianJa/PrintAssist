@@ -11,6 +11,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using OctoPrintConnector.Operations;
 using OctoPrintConnector.Messages;
+using System.Text.RegularExpressions;
+using OctoPrintConnector.Job;
 
 namespace OctoPrintConnector
 
@@ -44,11 +46,16 @@ namespace OctoPrintConnector
         public int WebSocketBufferSize = 4096;
 
         public event EventHandler<FileAddedEventArgs> FileAdded;
+        public event EventHandler<TemperReceivedEventArgs> TemperatureReceived;
+        public event EventHandler PrinterHoming;
+        public event EventHandler<Int32> CalibrationFinishedAndWaitingForFinalTemperature;
 
         public OctoprintFileOperation FileOperations { get; private set; }
 
         public OctoprintGeneral GeneralOperations { get; private set; }
+        public OctoprintJobOperations JobOpertations { get; private set; }
 
+        private Regex findM109CommandRegex;
         private string username;
         
         private string sessionID;
@@ -64,6 +71,9 @@ namespace OctoPrintConnector
             ApplicationKey = aK;
             FileOperations = new OctoprintFileOperation(this);
             GeneralOperations = new OctoprintGeneral(this);
+            JobOpertations = new OctoprintJobOperations(this);
+
+            findM109CommandRegex = new Regex(@"Send: .*M109 S(?<value>\d+)", RegexOptions.Compiled);
         }
 
 
@@ -179,6 +189,10 @@ namespace OctoPrintConnector
                             {
                                 FileAdded?.Invoke(this, new FileAddedEventArgs(tmp.Event.payload));
                             }
+                            else if (tmp.Event.type == "Home")
+                            {
+                                PrinterHoming?.Invoke(this, null);
+                            }
                         }
                         catch (Exception)
                         {
@@ -191,6 +205,24 @@ namespace OctoPrintConnector
                         try
                         {
                             var tmp = JsonSerializer.Deserialize<CurrentMessage>(data, new JsonSerializerOptions() { IgnoreNullValues = true });
+                            if (tmp.current.temps != null && tmp.current.temps.Count > 0)
+                            {
+                                var temps = tmp.current.temps[0];
+                                TemperatureReceived?.Invoke(this, new TemperReceivedEventArgs(temps.tool0.actual.Value,temps.tool0.target.Value, temps.bed.actual.Value, temps.bed.target.Value));
+                            }
+                            if(tmp.current.logs != null && tmp.current.logs.Count > 0)
+                            {
+                                foreach (var log in tmp.current.logs)
+                                {
+                                    var match = findM109CommandRegex.Match(log);
+
+                                    if (match.Success)
+                                    {
+                                        
+                                        CalibrationFinishedAndWaitingForFinalTemperature?.Invoke(this, Int32.Parse(match.Groups["value"].Value));
+                                    }
+                                }
+                            }
                         }
                         catch (Exception)
                         {

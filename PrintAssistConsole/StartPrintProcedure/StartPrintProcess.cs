@@ -52,17 +52,19 @@ namespace PrintAssistConsole
         private StartPrintDialogDataProvider dialogData;
         private ITelegramBotClient bot;
         private long id;
+        private string localGcodePath;
         private StateMachine<StartPrintProcessState, Trigger> machine;
         private List<string> dfContexts = new List<string>() { "startprintprocedure" };
 
         public event EventHandler PrintStarted;
         public event EventHandler StartPrintCanceled;
         
-        public StartPrintProcess(long chatId, ITelegramBotClient bot)
+        public StartPrintProcess(long chatId, ITelegramBotClient bot, string localGcodePath)
         {
             dialogData = new StartPrintDialogDataProvider();
             this.bot = bot;
             this.id = chatId;
+            this.localGcodePath = localGcodePath;
 
             // Instantiate a new state machine in the Start state
             machine = new StateMachine<StartPrintProcessState, Trigger>(StartPrintProcessState.BeforeStart);

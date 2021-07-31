@@ -1,9 +1,11 @@
-﻿using PrintAssistConsole.Intents;
+﻿using OctoPrintConnector;
+using PrintAssistConsole.Intents;
 using Stateless;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using Telegram.Bot;
@@ -48,6 +50,16 @@ namespace PrintAssistConsole
         private string printObject = null;
         private List<string> contexts;
         private CollectPrintInformationDialog collectingDataForPrintingDialog;
+        private string lastGcodeFile;
+        private bool printStarted = false;
+        private OctoprintServer octoprinServer;
+        private bool firstTemperatureReceivedMessage = true;
+        private string lastTemperaturMessageString;
+        private int temperatureMessageId;
+        private int temperaturToReach;
+        private bool calibrationFinished;
+        private bool updateTemperatureMessage;
+        private bool temperatureReached;
         private readonly StateMachine<ConversationState, Trigger> machine;
         protected readonly ITelegramBotClient bot;
 
@@ -121,11 +133,11 @@ namespace PrintAssistConsole
             machine.Configure(ConversationState.Slicing)
                 .OnEntryAsync(async () => await StartSlicingAsync())
                 .Permit(Trigger.SlicingCompletedWithoutPrintStart, ConversationState.Idle)
-                .Permit(Trigger.SlicingCompletedWithPrintStart, ConversationState.StartingPrint)
+                .Permit(Trigger.SlicingCompletedWithPrintStart, ConversationState.CheckBeforePrint)
                 .Permit(Trigger.Cancel, ConversationState.Idle);
 
-            machine.Configure(ConversationState.StartingPrint)
-               .OnEntryAsync(async () => await StartStartPrintProcessAsync())
+            machine.Configure(ConversationState.CheckBeforePrint)
+               .OnEntryAsync(async () => await CheckbeforePrintDialog())
                .Permit(Trigger.PrintStarted, ConversationState.Printing);
 
             machine.Configure(ConversationState.SearchModel)
@@ -140,8 +152,75 @@ namespace PrintAssistConsole
 
 
             machine.Configure(ConversationState.Printing)
-               .OnEntryAsync(async () => await SendMessageAsync("PRINT STARTED"));
+               .OnEntryAsync(async () => await StartPrinting());
 
+        }
+
+        private async Task StartPrinting()
+        {
+            // octoprint connection herstellen
+            // gcode hochladen
+            // druck starten
+
+            printStarted = true;
+            calibrationFinished = false;
+            firstTemperatureReceivedMessage = true;
+            updateTemperatureMessage = true;
+            temperatureReached = false;
+            octoprinServer = new OctoprintServer("octopi.local", "F1D0D415AF734647B739B34E8B55304F"); //move api key to appsettings.json. this octopi instance is only reachable from local network
+            octoprinServer.TemperatureReceived += OctoprinServer_TemperatureReceived;
+            octoprinServer.PrinterHoming += OctoprinServer_PrinterHoming;
+            octoprinServer.CalibrationFinishedAndWaitingForFinalTemperature += OctoprinServer_CalibrationFinishedAndWaitingForFinalTemperature;
+            var tmp = octoprinServer.GeneralOperations.Login();
+            await octoprinServer.StartWebsocketAsync(tmp.name, tmp.session);
+            await octoprinServer.FileOperations.UploadFileAsync(lastGcodeFile, "local", true, true);
+        }
+
+        private async void OctoprinServer_CalibrationFinishedAndWaitingForFinalTemperature(object sender, int args)
+        {
+            temperaturToReach = args;
+            calibrationFinished = true;
+            await SendMessageAsync("Die Kalibrierung ist abgeschlossen. Der Drucker heizt auf seine finale Betriebstempertur auf. Es geht gleich los.");
+        }
+
+
+        private async void OctoprinServer_PrinterHoming(object sender, EventArgs e)
+        {
+            await SendMessageAsync("Der Druck fährt nun zu seiner Startposition und führt anschließend seine automatische Kalibrierung aus.");
+        }
+
+        private async void OctoprinServer_TemperatureReceived(object sender, TemperReceivedEventArgs e)
+        {
+            if(firstTemperatureReceivedMessage)
+            {
+                firstTemperatureReceivedMessage = false;
+                lastTemperaturMessageString = $"Temperatur Düse: {e.ToolActual}°C/{e.ToolTarget}°C {Environment.NewLine}Temperatur Buildplate: {e.BedActual}°C/{e.BedTarget}°C";
+
+                var message = await bot.SendTextMessageAsync(Id, lastTemperaturMessageString);
+                temperatureMessageId = message.MessageId;
+            }
+            else
+            {
+                try
+                {
+                    var newMessage = $"Temperatur Düse: {e.ToolActual}°C/{e.ToolTarget}°C {Environment.NewLine}Temperatur Buildplate: {e.BedActual}°C/{e.BedTarget}°C";
+                    if (newMessage != lastTemperaturMessageString && updateTemperatureMessage)
+                    {
+                        await bot.EditMessageTextAsync(Id, temperatureMessageId, newMessage);
+                        lastTemperaturMessageString = newMessage;
+                    }
+
+                    if(calibrationFinished && Math.Abs(e.ToolActual-temperaturToReach) <= 2 && !temperatureReached)
+                    {
+                        temperatureReached = true;
+                        updateTemperatureMessage = false;
+                        await SendMessageAsync("Es geht los!");
+                    }
+                }
+                catch (Exception ex)
+                {
+                }
+            }
         }
 
         private async Task StartCollectingDataForPrintingAsync()
@@ -205,9 +284,9 @@ namespace PrintAssistConsole
             await machine.FireAsync(Trigger.SearchAborted);
         }
 
-        private async Task StartStartPrintProcessAsync()
+        private async Task CheckbeforePrintDialog()
         {
-            this.startPrintProcess = new StartPrintProcess(Id, bot);
+            this.startPrintProcess = new StartPrintProcess(Id, bot, lastGcodeFile);
             startPrintProcess.PrintStarted += StartPrintProcess_PrintStarted;
             await startPrintProcess.StartAsync();
         }
@@ -234,6 +313,40 @@ namespace PrintAssistConsole
         private async void SlicingProcess_SlicingProcessCompletedWithStartPrint(object sender, string gcodeLink)
         {
             await machine.FireAsync(Trigger.SlicingCompletedWithPrintStart);
+            var gcodeUri = new Uri("http://localhost:5003" + gcodeLink);
+            await DownloadGcodeAsync(gcodeUri);
+            
+        }
+
+        private async Task<bool> DownloadGcodeAsync(Uri remotelocaltion, string fileName = null)
+        {
+            string downloadPath;
+            if (fileName == null && remotelocaltion.Segments[^1].EndsWith(".gcode"))
+            {
+                downloadPath = Path.Combine(".\\Models", remotelocaltion.Segments[^1]);
+            }
+            else if(fileName!= null && fileName.EndsWith(".gcode"))
+            {
+                downloadPath = Path.Combine(".\\Models", fileName);
+            }
+            else
+            {
+                throw new ArgumentException();
+            }
+
+            lastGcodeFile = downloadPath;
+            using (WebClient webclient = new WebClient())
+            {
+                try
+                {
+                    await webclient.DownloadFileTaskAsync(remotelocaltion, downloadPath);
+                }
+                catch (Exception e)
+                {
+                    return false;
+                }
+                return true;
+            }
         }
 
         private async void SlicingProcess_SlicingProcessWithoutCompleted(object sender, EventArgs e)
@@ -279,11 +392,11 @@ namespace PrintAssistConsole
             //await SendMessageAsync("Hi I am your print assistant. I can do stuff for you. How should i call you?");
             await SendMessageAsync("Hi. Ich bin dein persönlicher Druckassistent. Ich kann XXX für dich tun. Wie soll ich dich nennen?");
         }
-        private async Task SendMessageAsync(string text, IReplyMarkup replyKeyboardMarkup = null)
+        private async Task<Telegram.Bot.Types.Message> SendMessageAsync(string text, IReplyMarkup replyKeyboardMarkup = null)
         {
             replyKeyboardMarkup ??= new ReplyKeyboardRemove(); // if null then
             
-            await bot.SendTextMessageAsync(chatId: Id,
+            return await bot.SendTextMessageAsync(chatId: Id,
                             text: text,
                             replyMarkup: replyKeyboardMarkup);
         }
@@ -458,7 +571,7 @@ namespace PrintAssistConsole
                             await slicingProcess.HandleInputAsync(update);
                             break;
                         }
-                    case ConversationState.StartingPrint:
+                    case ConversationState.CheckBeforePrint:
                         {
                             await startPrintProcess.HandleInputAsync(update);
                             break;
