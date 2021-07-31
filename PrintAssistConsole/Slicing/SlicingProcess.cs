@@ -24,7 +24,7 @@ namespace PrintAssistConsole
         BeforeStart = -1,
         ModeSelection,
         ExpertModeLayerHeight,
-        BeginnerModePrototype,
+        GuidedModePrototype,
         ExpertModeInfill,
         ExpertModeSupport,
         ExpertModeAskToChangeOtherParameters,
@@ -32,15 +32,17 @@ namespace PrintAssistConsole
         ExpertModeAskForParameterName,
         EndSlicingWithoutPrinting,
         EndSlicingWithPrinting,
-        BeginnerModeSurfaceSelection,
-        BeginnerModeMechanicalForce,
-        BeginnerModeOverhangs,
-        BeginnerModeSummary,
+        GuidedModeSurfaceSelection,
+        GuidedModeMechanicalForce,
+        GuidedModeOverhangs,
+        guidedModeSummary,
         SlicingServiceCompleted,
         StartPrinting,
         DontPrintAfterSclicing,
         PrintAfterSclicing,
-        BeginnerModeDetails,
+        GuidedModeDetails,
+        SelectingPreset,
+        AdvancedSupport,
     }
 
     public class SlicingProcess
@@ -52,12 +54,15 @@ namespace PrintAssistConsole
             StoreFile,
             SelectingMode,
             SelectingExpertMode,
-            SelectingBeginnerMode,
+            SelectingGuidedMode,
             LayerHeightEntered,
             InfillEntered,
             ExpertModeSupportEntered,
             Yes,
-            No
+            No,
+            SelectingPresets,
+            PresetSelcted,
+            AdvancedSupportEntered
         }
 
         private readonly SlicingDialogDataProvider dialogData;
@@ -82,6 +87,14 @@ namespace PrintAssistConsole
         private int progessMessageId;
         private long fromId;
         private Timer Timer;
+        private List<string> Profiles = new List<string>()
+        {
+            "0.07mm ULTRADETAIL", "0.10mm DETAIL",
+            "0.15mm QUALITY", "0.15mm SPEED",
+            "0.20mm QUALITY", "0.20mm SPEED",
+            "0.25mm DRAFT"
+        };
+        private string selectedProfileFile = null;
 
         public event EventHandler SlicingProcessCompletedWithoutStartPrint;
         public event EventHandler<string> SlicingProcessCompletedWithStartPrint;
@@ -112,8 +125,19 @@ namespace PrintAssistConsole
 
             machine.Configure(SlicingProcessState.ModeSelection)
                 .OnEntryAsync(async () => await SendMessageAsync(machine.State))
+                .Permit(Trigger.SelectingPresets, SlicingProcessState.SelectingPreset)
                 .Permit(Trigger.SelectingExpertMode, SlicingProcessState.ExpertModeLayerHeight)
-                .Permit(Trigger.SelectingBeginnerMode, SlicingProcessState.BeginnerModePrototype);
+                .Permit(Trigger.SelectingGuidedMode, SlicingProcessState.GuidedModePrototype);
+
+            machine.Configure(SlicingProcessState.SelectingPreset)
+                .OnEntryAsync(async () => await SendMessageAsync(machine.State))
+                .InternalTransitionAsync(Trigger.SelectingPresets, async () => { await SendMessageAsync(machine.State); })
+                .Permit(Trigger.PresetSelcted, SlicingProcessState.AdvancedSupport)
+                ;
+
+            machine.Configure(SlicingProcessState.AdvancedSupport)
+                .OnEntryAsync(async () => await SendMessageAsync(machine.State))
+                .Permit(Trigger.AdvancedSupportEntered, SlicingProcessState.SlicingServiceStarted);
 
             machine.Configure(SlicingProcessState.ExpertModeLayerHeight)
                 .OnEntryAsync(async () => await SendMessageAsync(machine.State))
@@ -148,29 +172,29 @@ namespace PrintAssistConsole
                .Permit(Trigger.No, SlicingProcessState.DontPrintAfterSclicing)
                .Permit(Trigger.Yes, SlicingProcessState.PrintAfterSclicing);
 
-            machine.Configure(SlicingProcessState.BeginnerModePrototype)
+            machine.Configure(SlicingProcessState.GuidedModePrototype)
                 .OnEntryAsync(async () => await SendMessageAsync(machine.State))
-                .Permit(Trigger.No, SlicingProcessState.BeginnerModeSurfaceSelection)
-                .Permit(Trigger.Yes, SlicingProcessState.BeginnerModeOverhangs);
+                .Permit(Trigger.No, SlicingProcessState.GuidedModeSurfaceSelection)
+                .Permit(Trigger.Yes, SlicingProcessState.GuidedModeOverhangs);
 
-            machine.Configure(SlicingProcessState.BeginnerModeSurfaceSelection)
+            machine.Configure(SlicingProcessState.GuidedModeSurfaceSelection)
                 .OnEntryAsync(async () => await SendMessageAsync(machine.State))
-                .Permit(Trigger.Next, SlicingProcessState.BeginnerModeMechanicalForce);
+                .Permit(Trigger.Next, SlicingProcessState.GuidedModeMechanicalForce);
 
-            machine.Configure(SlicingProcessState.BeginnerModeMechanicalForce)
+            machine.Configure(SlicingProcessState.GuidedModeMechanicalForce)
                 .OnEntryAsync(async () => await SendMessageAsync(machine.State))
-                .Permit(Trigger.Next, SlicingProcessState.BeginnerModeOverhangs);
+                .Permit(Trigger.Next, SlicingProcessState.GuidedModeOverhangs);
 
-            machine.Configure(SlicingProcessState.BeginnerModeOverhangs)
+            machine.Configure(SlicingProcessState.GuidedModeOverhangs)
                 .OnEntryAsync(async () => await SendMessageAsync(machine.State))
-                .PermitIf(Trigger.Next, SlicingProcessState.BeginnerModeDetails, () => { return isPrototype == false; })
-                .PermitIf(Trigger.Next, SlicingProcessState.BeginnerModeSummary, () => { return isPrototype == true; });
+                .PermitIf(Trigger.Next, SlicingProcessState.GuidedModeDetails, () => { return isPrototype == false; })
+                .PermitIf(Trigger.Next, SlicingProcessState.guidedModeSummary, () => { return isPrototype == true; });
 
-            machine.Configure(SlicingProcessState.BeginnerModeDetails)
+            machine.Configure(SlicingProcessState.GuidedModeDetails)
                .OnEntryAsync(async () => await SendMessageAsync(machine.State))
-               .Permit(Trigger.Next, SlicingProcessState.BeginnerModeSummary);
+               .Permit(Trigger.Next, SlicingProcessState.guidedModeSummary);
 
-            machine.Configure(SlicingProcessState.BeginnerModeSummary)
+            machine.Configure(SlicingProcessState.guidedModeSummary)
                 .OnEntryAsync(async () => { CalculateSlicingParameters(); await SendSlicingParameterSummaryMessageAsync(); })
                 .Permit(Trigger.Next, SlicingProcessState.SlicingServiceStarted);
 
@@ -253,15 +277,24 @@ namespace PrintAssistConsole
         {
             slicingServiceClient = new SlicingServiceClient("ws://localhost:5003/ws");
             slicingServiceClient.SlicingCompleted += SlicingServiceClient_SlicingCompleted;
-            
+
             if (cliCommands == null)
             {
-                var tmp = PrusaSlicerCLICommands.Default;
-                
-                tmp.LayerHeight = layerHeight;
-                tmp.SupportMaterial = supportMaterial;
-                tmp.FillDensity = fillDensity / 100f;
-                cliCommands = tmp;
+                if (selectedProfileFile != null)
+                {
+                    cliCommands = PrusaSlicerCLICommands.Default;
+                    cliCommands.SupportMaterial = supportMaterial;
+                    cliCommands.LoadConfigFile = selectedProfileFile;
+                }
+                else
+                {
+                    var tmp = PrusaSlicerCLICommands.Default;
+
+                    tmp.LayerHeight = layerHeight;
+                    tmp.SupportMaterial = supportMaterial;
+                    tmp.FillDensity = fillDensity / 100f;
+                    cliCommands = tmp;
+                }
             }
 
             cliCommands.FileURI = modelPath;
@@ -413,16 +446,22 @@ namespace PrintAssistConsole
                     break;
                 case SlicingProcessState.ModeSelection:
                     {
-                        switch (update.Message.Text.ToLower())
+                        var intent = await IntentDetector.Instance.CallDFAPIAsync(id, update.Message.Text, "slicing");
+                        switch (intent)
                         {
-                            case "expert":
+                            case SlicingModeSelectionExpert:
                                 {
                                     await machine.FireAsync(Trigger.SelectingExpertMode);
                                     break;
                                 }
-                            case "beginner":
+                            case SlicingModeSelectionAdvanced:
                                 {
-                                    await machine.FireAsync(Trigger.SelectingBeginnerMode);
+                                    await machine.FireAsync(Trigger.SelectingPresets);
+                                    break;
+                                }
+                            case SlicingModeSelectionGuided:
+                            {
+                                    await machine.FireAsync(Trigger.SelectingGuidedMode);
                                     break;
                                 }
                             default:
@@ -431,6 +470,44 @@ namespace PrintAssistConsole
                                     break;
                                 }
                         }
+                        break;
+                    }
+                case SlicingProcessState.SelectingPreset:
+                    {
+                        var profil = update.Message.Text;
+
+                        if(Profiles.Any((x) => x == profil))
+                        {
+                            selectedProfileFile = profil + ".ini";
+                            await machine.FireAsync(Trigger.PresetSelcted);
+                        }
+                        else
+                        {
+                            await SendMessageAsync("Ungültiges Profil.");
+                            await machine.FireAsync(Trigger.SelectingPresets);
+                        }
+
+                        break;
+                    }
+                case SlicingProcessState.AdvancedSupport:
+                    {
+                        var intent = await IntentDetector.Instance.CallDFAPIAsync(id, update.Message.Text, "TutorialStarten-followup"); //reuse the Yes No intents from the tutorial
+                        switch (intent)
+                        {
+                            case TutorialYes:
+                                {
+                                    supportMaterial = true;
+                                    break;
+                                }
+                            case TutorialNo:
+                                {
+                                    supportMaterial = false;
+                                    break;
+                                }
+                            default:
+                                break;
+                        }
+                        await machine.FireAsync(Trigger.AdvancedSupportEntered);
                         break;
                     }
                 case SlicingProcessState.ExpertModeLayerHeight:
@@ -458,7 +535,7 @@ namespace PrintAssistConsole
 
                         break;
                     }
-                case SlicingProcessState.BeginnerModePrototype:
+                case SlicingProcessState.GuidedModePrototype:
                     {
                         var intent = await IntentDetector.Instance.CallDFAPIAsync(id, update.Message.Text, "TutorialStarten-followup"); //reuse the Yes No intents from the tutorial
                         switch (intent)
@@ -537,7 +614,7 @@ namespace PrintAssistConsole
                     break;
                 case SlicingProcessState.EndSlicingWithPrinting:
                     break;
-                case SlicingProcessState.BeginnerModeSurfaceSelection:
+                case SlicingProcessState.GuidedModeSurfaceSelection:
                     {
                         var intent = await IntentDetector.Instance.CallDFAPIAsync(id, update.Message.Text, "TutorialStarten-followup"); //reuse the Yes No intents from the tutorial
                         switch (intent)
@@ -561,7 +638,7 @@ namespace PrintAssistConsole
 
                         break;
                     }
-                case SlicingProcessState.BeginnerModeMechanicalForce:
+                case SlicingProcessState.GuidedModeMechanicalForce:
                     {
                         var intent = await IntentDetector.Instance.CallDFAPIAsync(id, update.Message.Text, "TutorialStarten-followup"); //reuse the Yes No intents from the tutorial
                         switch (intent)
@@ -584,7 +661,7 @@ namespace PrintAssistConsole
                         await machine.FireAsync(Trigger.Next);
                         break;
                     }
-                case SlicingProcessState.BeginnerModeOverhangs:
+                case SlicingProcessState.GuidedModeOverhangs:
                     {
                         var intent = await IntentDetector.Instance.CallDFAPIAsync(id, update.Message.Text, "TutorialStarten-followup"); //reuse the Yes No intents from the tutorial
                         switch (intent)
@@ -607,7 +684,7 @@ namespace PrintAssistConsole
                         await machine.FireAsync(Trigger.Next);
                         break;
                     }
-                case SlicingProcessState.BeginnerModeDetails:
+                case SlicingProcessState.GuidedModeDetails:
                     {
                         var intent = await IntentDetector.Instance.CallDFAPIAsync(id, update.Message.Text, "TutorialStarten-followup"); //reuse the Yes No intents from the tutorial
                         switch (intent)
@@ -630,7 +707,7 @@ namespace PrintAssistConsole
                         await machine.FireAsync(Trigger.Next);
                         break;
                     }
-                case SlicingProcessState.BeginnerModeSummary:
+                case SlicingProcessState.guidedModeSummary:
                     break;
                 case SlicingProcessState.SlicingServiceCompleted:
                     {

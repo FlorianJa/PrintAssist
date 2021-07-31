@@ -1,49 +1,65 @@
 {
-	0: {
-		"text": "Okay, in welchem Modus möchtest du slicen?",
-		"KeyboardButtons": [ [ "Expert", "Beginner" ] ]
-	},
-	1: {
-		"text": "Okay, fangen wir an. Wie hoch sollen die Schichten sein?",
-		"KeyboardButtons": [ [ "0,07 mm", "0,1 mm", "0,15 mm", "0,2 mm", "0,25 mm", "0,3 mm" ] ]
-	},
-	3: {
-		"text": "Wie viel Infill willst du haben?",
-		"KeyboardButtons": [ [ "15%", "20%", "25%", "50%", "75%", "100%" ] ]
-	},
-	4: {
-		"text": "Sollen Supportstrukturen aktiviert werden?",
-		"KeyboardButtons": [ [ "Ja", "Nein" ] ]
-	},
-	6: {
-		"text": "Okay, ich slice jetzt das Modell. Das kann ein paar Sekunden dauern. Bitte warten."
-	},
-	14: {
-		"text": "Möchtest du den Druck jetzt starten?",
-		"KeyboardButtons": [ [ "Nein", "Ja" ] ]
-	},
-	16: {
-		"text": "Okay. Ich passe auf die Datei auf. Du kannst mich später noch mal fragen."
-	},
-	2: {
-		"text": "Okay, lass uns anfangen. Handelt es sich um einen Testdruck von einem Prototypen?",
-		"KeyboardButtons": [ [ "Nein", "Ja" ] ]
-	},
-	10: {
-		"text": "Alles klar. Soll das Objekt eine glatte Oberfläche haben?",
-		"KeyboardButtons": [ [ "Nein", "Ja" ] ]
-	},
-	11: {
-		"text": "Muss das Objekt mechanischer Belastung standhalten?",
-		"KeyboardButtons": [ [ "Nein", "Ja" ] ]
-	},
-	12: {
-		"text": "Hat das Objekt Überhänge?",
-		"KeyboardButtons": [ [ "Nein", "Ja" ] ]
-	},
-	18: {
-		"text": "Hat das Objekt feine Details, die sorgfältig gedruckt werden müssen?",
-		"KeyboardButtons": [ [ "Nein", "Ja" ] ]
-	}
-
+  0: {
+    "text": "Okay, wie möchtest du slicen?",
+    "KeyboardButtons": [
+      [ "Parameter eigenständig eingeben (für Experten)" ],
+      [ "Vorgefertigtes Profil verwenden (für Fortgeschrittene)" ],
+      [ "Geführter Modus (für Einsteiger)" ]
+    ]
+  },
+  1: {
+    "text": "Okay, fangen wir an. Wie hoch sollen die Schichten sein?",
+    "KeyboardButtons": [ [ "0,07 mm", "0,1 mm", "0,15 mm", "0,2 mm", "0,25 mm", "0,3 mm" ] ]
+  },
+  3: {
+    "text": "Wie viel Infill willst du haben?",
+    "KeyboardButtons": [ [ "15%", "20%", "25%", "50%", "75%", "100%" ] ]
+  },
+  4: {
+    "text": "Sollen Supportstrukturen aktiviert werden?",
+    "KeyboardButtons": [ [ "Ja", "Nein" ] ]
+  },
+  6: {
+    "text": "Okay, ich slice jetzt das Modell. Das kann ein paar Sekunden dauern. Bitte warten."
+  },
+  14: {
+    "text": "Möchtest du den Druck jetzt starten?",
+    "KeyboardButtons": [ [ "Nein", "Ja" ] ]
+  },
+  16: {
+    "text": "Okay. Ich passe auf die Datei auf. Du kannst mich später noch mal fragen."
+  },
+  2: {
+    "text": "Okay, lass uns anfangen. Handelt es sich um einen Testdruck von einem Prototypen?",
+    "KeyboardButtons": [ [ "Nein", "Ja" ] ]
+  },
+  10: {
+    "text": "Alles klar. Soll das Objekt eine glatte Oberfläche haben?",
+    "KeyboardButtons": [ [ "Nein", "Ja" ] ]
+  },
+  11: {
+    "text": "Muss das Objekt mechanischer Belastung standhalten?",
+    "KeyboardButtons": [ [ "Nein", "Ja" ] ]
+  },
+  12: {
+    "text": "Hat das Objekt Überhänge?",
+    "KeyboardButtons": [ [ "Nein", "Ja" ] ]
+  },
+  18: {
+    "text": "Hat das Objekt feine Details, die sorgfältig gedruckt werden müssen?",
+    "KeyboardButtons": [ [ "Nein", "Ja" ] ]
+  },
+  19: {
+    "text": "Wähle bitte Profil aus der List aus.",
+    "KeyboardButtons": [
+      [ "0.07mm ULTRADETAIL", "0.10mm DETAIL" ],
+      [ "0.15mm QUALITY", "0.15mm SPEED" ],
+      [ "0.20mm QUALITY", "0.20mm SPEED" ],
+      [ "0.25mm DRAFT" ]
+    ]
+  },
+  20: {
+    "text": "Sollen Supportstrukturen aktiviert werden?",
+    "KeyboardButtons": [ [ "Ja", "Nein" ] ]
+  }
 }

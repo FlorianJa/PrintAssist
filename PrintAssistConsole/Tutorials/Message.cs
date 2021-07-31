@@ -13,6 +13,8 @@ namespace PrintAssistConsole
         public List<string> PhotoFilePaths { get; set; }
         public List<string> VideoFilePaths { get; set; }
         public List<List<string>> KeyboardButtons { get; set; }
+        public List<List<string>> InlineKeyboardButtons { get; set; }
+
 
         public IReplyMarkup ReplyKeyboardMarkup
         {
