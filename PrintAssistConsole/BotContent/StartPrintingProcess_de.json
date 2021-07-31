@@ -1,7 +1,10 @@
 {
 	0: {
-		"text": "Bevor wir den Druck starten können, musst du ein paar Sachen für mich überprüfen.",
-		"KeyboardButtons": [[ "Druckstart abbrechen", "Okay" ]]
+		"text": "Bevor ich den Druck starten kann, musst du überprüfen ob der Drucker bereit ist.",
+		"KeyboardButtons": [
+			[ "Drucker ist bereit, direkt starten" ],
+			[ "Druckstart abbrechen", "Okay, was muss ich überprüfen?" ]
+		]
 	},
 
 	1: {

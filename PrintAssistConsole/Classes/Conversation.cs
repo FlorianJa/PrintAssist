@@ -324,11 +324,11 @@ namespace PrintAssistConsole
             string downloadPath;
             if (fileName == null && remotelocaltion.Segments[^1].EndsWith(".gcode"))
             {
-                downloadPath = Path.Combine(".\\Models", remotelocaltion.Segments[^1]);
+                downloadPath = Path.Combine(".\\Gcode", remotelocaltion.Segments[^1]);
             }
             else if(fileName!= null && fileName.EndsWith(".gcode"))
             {
-                downloadPath = Path.Combine(".\\Models", fileName);
+                downloadPath = Path.Combine(".\\Gcode", fileName);
             }
             else
             {

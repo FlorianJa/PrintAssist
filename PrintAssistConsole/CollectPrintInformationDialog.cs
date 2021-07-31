@@ -18,14 +18,14 @@ namespace PrintAssistConsole
 
     public enum CollectPrintInformationState : int
     {
-       Start = -1,
-       ConfirmInput = 0,
-       AskForFile = 1,
-       EnteringObjectName = 2,
-       SearchModel = 3,
-       ModelSelection = 4,
-       End = 5,
-       Abort = 6,
+        Start = -1,
+        ConfirmInput = 0,
+        AskForFile = 1,
+        EnteringObjectName = 2,
+        SearchModel = 3,
+        ModelSelection = 4,
+        End = 5,
+        Abort = 6,
         EndWithSTL = 7,
         EndWithGcode = 8,
         WaitForFile = 9

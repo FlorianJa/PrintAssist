@@ -46,7 +46,8 @@ namespace PrintAssistConsole
             StartPrintNow,
             ShowHelpForChangingFilament,
             ChangeIndependently,
-            FilamentChanged
+            FilamentChanged,
+            Skip
         }
 
         private StartPrintDialogDataProvider dialogData;
@@ -77,7 +78,8 @@ namespace PrintAssistConsole
             machine.Configure(StartPrintProcessState.Start)
                 .OnEntryAsync(async () => await SendMessageAsync(machine.State))
                 .Permit(Trigger.Cancel, StartPrintProcessState.Canceled)
-                .Permit(Trigger.StartPrintProcedure, StartPrintProcessState.CheckBuildplate);
+                .Permit(Trigger.StartPrintProcedure, StartPrintProcessState.CheckBuildplate)
+                .Permit(Trigger.Skip, StartPrintProcessState.PrintStarted);
 
             machine.Configure(StartPrintProcessState.CheckBuildplate)
                 .OnEntryAsync(async () => await SendMessageAsync(machine.State))
@@ -155,6 +157,11 @@ namespace PrintAssistConsole
                         {
                             switch (intent)
                             {
+                                case SkipCheck:
+                                    {
+                                        await machine.FireAsync(Trigger.Skip);
+                                        break;
+                                    }
                                 case StartProcedure:
                                     {
                                         await machine.FireAsync(Trigger.StartPrintProcedure);

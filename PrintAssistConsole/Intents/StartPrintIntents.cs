@@ -8,6 +8,16 @@ using System.Threading.Tasks;
 namespace PrintAssistConsole.Intents
 {
 
+    
+    [IntentAttribute("StartPrintProcedure.SkipCheck")]
+    public class SkipCheck : BaseIntent
+    {
+        public override string Process()
+        {
+            throw new NotImplementedException();
+        }
+    }
+
     [IntentAttribute("PrintObjectRecognised.Yes")]
     public class PrintObjectRecognisedYes : BaseIntent
     {
