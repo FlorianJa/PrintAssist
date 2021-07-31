@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -64,6 +64,9 @@
     </None>
     <None Update="BotContent\images\Overhangs.jpg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="BotContent\images\Placeholder.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="BotContent\images\Printhead.jpg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

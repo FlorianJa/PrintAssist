@@ -297,7 +297,10 @@ namespace PrintAssistConsole
             message += Environment.NewLine;
             message += $"Benötigtes Filament = {args.UsedFilament:F2}m";
 
-            await SendMessageAsync(message);
+            var photos = new List<string>() { ".\\BotContent\\images\\Placeholder.png" };
+            Message tmp = new Message(text: message,photos);
+
+            await SendMessageAsync(tmp);
             await machine.FireAsync(Trigger.Next);
         }
 
