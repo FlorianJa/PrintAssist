@@ -67,7 +67,7 @@ namespace PrintAssistConsole
         private List<string> dfContexts = new List<string>() { "PrintObjectRecognised" };
         private string selectedModelUrl;
         private CollectPrintInformationState previousState;
-
+        private string searchTerm;
         public event EventHandler<string> StartModelSearch;
         public event EventHandler<string> StartSlicing;
         public event EventHandler<string> StartPrinting;
@@ -110,7 +110,7 @@ namespace PrintAssistConsole
 
             machine.Configure(CollectPrintInformationState.EnteringObjectName)
                 .OnEntryFromAsync(Trigger.NoFile, async () => await SendMessageAsync(resourceManager.GetString("WhatToPrint", currentCulture)))
-                .OnEntryFromAsync(Trigger.InputCorrect, async () => await SendMessageAsync(resourceManager.GetString("WhatToPrint", currentCulture)))
+                .OnEntryFromAsync(Trigger.InputIncorrect, async () => await SendMessageAsync(resourceManager.GetString("WhatToPrint", currentCulture)))
                 .OnEntryFromAsync(Trigger.NewSearchTerm, async () => await SendMessageAsync(resourceManager.GetString("NewSearchTerm", currentCulture)))
                 .OnExit(() => previousState = machine.State)
                 .Permit(Trigger.InputEntered, CollectPrintInformationState.ConfirmInput);
@@ -194,9 +194,9 @@ namespace PrintAssistConsole
                     }
                 case CollectPrintInformationState.EnteringObjectName:
                     {
-                        //printObject = update.Message.Text;
+                        //searchTerm = update.Message.Text;
 
-                        var intent = await IntentDetector.Instance.CallDFAPIAsync(id, update.Message.Text, contexts, false);
+                        var intent = await IntentDetector.Instance.CallDFAPIAsync(id, update.Message.Text, contexts, true);
 
                         if (intent is StartPrint)
                         {
