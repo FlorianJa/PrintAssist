@@ -80,7 +80,7 @@ namespace PrintAssistConsole
             }
         }
 
-        public Conversation(Int64 id, ITelegramBotClient bot, string culture = "de-DE")
+        public Conversation(Int64 id, ITelegramBotClient bot, string culture = "en-US")
         {
             Id = id;
             this.bot = bot;
@@ -540,7 +540,7 @@ namespace PrintAssistConsole
                                             break;
                                         }
                                     default:
-                                        await SendMessageAsync("Intent detected:" + intent.GetType() + ". There is no implementation for this intent yet.");
+                                        if(intent != null) await SendMessageAsync("Intent detected:" + intent.GetType() + ". There is no implementation for this intent yet.");
                                         break;
                                 }
                             }
