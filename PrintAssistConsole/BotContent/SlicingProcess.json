@@ -1,7 +1,11 @@
 {
 	0: {
-		"text": "Okay, in which mode do you want to slice the model?",
-		"KeyboardButtons": [ [ "Expert", "Beginner" ] ]
+		"text": "Okay, how do you want to slice?",
+		"KeyboardButtons": [
+			[ "Parameter eigenständig eingeben (für Experten)" ],
+			[ "Vorgefertigtes Profil verwenden (für Fortgeschrittene)" ],
+			[ "Geführter Modus (für Einsteiger)" ]
+		]
 	},
 	1: {
 		"text": "Let's start slicing! How thick should the layers be?",
@@ -44,6 +48,27 @@
 	18: {
 		"text": "Does the object have fine details which need to be printed carefully?",
 		"KeyboardButtons": [ [ "Nein", "Ja" ] ]
+	},
+	19: {
+		"text": "Please select a profile.",
+		"KeyboardButtons": [
+			[ "0.07mm ULTRADETAIL", "0.10mm DETAIL" ],
+			[ "0.15mm QUALITY", "0.15mm SPEED" ],
+			[ "0.20mm QUALITY", "0.20mm SPEED" ],
+			[ "0.25mm DRAFT" ]
+		]
+	},
+	20: {
+		"text": "Should support structures be activated?",
+		"KeyboardButtons": [ [ "Ja", "Nein" ] ]
+	},
+	21: {
+		"text": "Do you want to set more parameters?",
+		"KeyboardButtons": [ [ "Ja", "Nein" ] ]
+	},
+	22: {
+		"text": "This function is not implented yet, but will follow soon :)",
+		"KeyboardButtons": [ [ "Okay" ] ]
 	}
 
 }

@@ -28,7 +28,7 @@
 		"KeyboardButtons": [[ "Druckstart abbrechen", "Druck jetzt starten" ]]
 	},
 	10: {
-		"text": "Der Drucker heizt jetzt auf und startet dann gleich. Während des Drucks kannst du mich nach dem Druckfortschritt fragen. Wenn der Druck fertig ist, sage ich dir Bescheid."
+		"text": "Der Drucker heizt jetzt auf und startet dann gleich."
 	},
 	4: {
 		"text": "Nimm die Buildplate vom Drucker und bieg sie vorsichtig, wie im Video, damit sich die vorherigen Drucke lösen. Entfern alle Objekte von der Buildplate und reinige sie mit XX. Anschließend muss du die Buildplate wieder auf den legen.",

@@ -1,7 +1,10 @@
 {
 	0: {
 		"text": "Before I can start the print, you need to check a few things for me.",
-		"KeyboardButtons": [[ "Druckstart abbrechen", "Okay" ]]
+		"KeyboardButtons": [
+			[ "Drucker ist bereit, direkt starten" ],
+			[ "Druckstart abbrechen", "Okay, was muss ich überprüfen?" ]
+		]
 	},
 
 	1: {
@@ -25,7 +28,7 @@
 		"KeyboardButtons": [[ "Druckstart abbrechen", "Druck jetzt starten" ]]
 	},
 	10: {
-		"text": "The printer now heats up and starts printing soon. During the print, you can ask me about the print progress. When the print is finished I will notify you."
+		"text": "The printer now heats up and starts printing soon."
 	},
 	4: {
 		"text": "Take the buildplate from the printer and bend it gently like in the video. Remove all printed parts and clean it with XXX. Afterwards put the buildplate back on the printer.",

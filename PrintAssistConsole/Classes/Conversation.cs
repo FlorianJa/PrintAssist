@@ -79,7 +79,7 @@ namespace PrintAssistConsole
             }
         }
 
-        public Conversation(Int64 id, ITelegramBotClient bot, string culture = "de-DE")
+        public Conversation(Int64 id, ITelegramBotClient bot, string culture = "en-US")
         {
             Id = id;
             this.bot = bot;
@@ -184,7 +184,7 @@ namespace PrintAssistConsole
             firstTemperatureReceivedMessage = true;
             updateTemperatureMessage = true;
             temperatureReached = false;
-            octoprinServer = new OctoprintServer("octopi.local", "F1D0D415AF734647B739B34E8B55304F"); //move api key to appsettings.json. this octopi instance is only reachable from local network
+            octoprinServer = new OctoprintServer("192.168.2.197", "F1D0D415AF734647B739B34E8B55304F"); //move api key to appsettings.json. this octopi instance is only reachable from local network
             octoprinServer.TemperatureReceived += OctoprinServer_TemperatureReceived;
             octoprinServer.PrinterHoming += OctoprinServer_PrinterHoming;
             octoprinServer.CalibrationFinishedAndWaitingForFinalTemperature += OctoprinServer_CalibrationFinishedAndWaitingForFinalTemperature;
@@ -269,7 +269,7 @@ namespace PrintAssistConsole
         }
         private async Task StartSearchModelProcessAsync()
         {
-            this.searchModelProcess = new SearchModelDialog(Id, bot, resourceManager,currentCulture, printObject);
+            this.searchModelProcess = new SearchModelDialog(Id, bot, resourceManager, currentCulture, printObject);
             searchModelProcess.SearchAborted += SearchModelProcess_SearchAborted;
             searchModelProcess.SearchCompleted += SearchModelProcess_SearchCompleted;
             await searchModelProcess.StartAsync();

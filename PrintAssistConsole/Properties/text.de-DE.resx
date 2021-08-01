@@ -217,16 +217,16 @@
     <value>Druckdauer</value>
   </data>
   <data name="PrintStarting" xml:space="preserve">
-    <value>Es geht los!</value>
+    <value>Es geht los! Während des Drucks kannst du mich nach dem Druckfortschritt fragen. Wenn der Druck fertig ist, sage ich dir Bescheid.</value>
   </data>
-  <data name="Progress" xml:space="preserve">
+  <data name="Progess" xml:space="preserve">
     <value>Fortschritt</value>
   </data>
   <data name="RemainingTime" xml:space="preserve">
     <value>Restliche Druckdauer</value>
   </data>
   <data name="SearchingForModel" xml:space="preserve">
-    <value>Ok, ich suche nach: *0*</value>
+    <value>Ok, ich suche nach: *{0}*</value>
   </data>
   <data name="SearchModelDialogPath" xml:space="preserve">
     <value>.\BotContent\SearchModelDialog_de.json</value>
