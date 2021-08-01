@@ -59,10 +59,11 @@ namespace PrintAssistConsole
         private ITelegramBotClient bot;
         private readonly string printObject1;
         private StateMachine<CollectPrintInformationState, Trigger> machine;
-        private string printObject;
+        private string stlFile;
         private List<string> contexts;
         private readonly ResourceManager resourceManager;
         private readonly CultureInfo currentCulture;
+        private string gcodeFile;
         private List<string> dfContexts = new List<string>() { "PrintObjectRecognised" };
         private string selectedModelUrl;
         private CollectPrintInformationState previousState;
@@ -71,16 +72,18 @@ namespace PrintAssistConsole
         public event EventHandler<string> StartSlicing;
         public event EventHandler<string> StartPrinting;
 
-        public CollectPrintInformationDialog(long chatId, ITelegramBotClient bot, string printObject, List<string> contexts, ResourceManager resourceManager, CultureInfo currentCulture)
+        public CollectPrintInformationDialog(long chatId, ITelegramBotClient bot, string stlFile, string gcodeFile, List<string> contexts, ResourceManager resourceManager, CultureInfo currentCulture)
         {
             id = chatId;
             this.bot = bot;
-            printObject1 = printObject;
+            printObject1 = stlFile;
             dialogData = new CollectPrintInformationDialogDataProvider(resourceManager.GetString("CollectPrintInformationDataPath", currentCulture));
-            this.printObject = new String(printObject);
+            this.stlFile = new String(stlFile);
             this.contexts = contexts;
             this.resourceManager = resourceManager;
             this.currentCulture = currentCulture;
+            this.gcodeFile = gcodeFile;
+
             // Instantiate a new state machine in the Start state
             machine = new StateMachine<CollectPrintInformationState, Trigger>(CollectPrintInformationState.Start);
 
@@ -136,13 +139,13 @@ namespace PrintAssistConsole
 
         private void StartSearchDialog()
         {
-            StartModelSearch?.Invoke(this, printObject);
+            StartModelSearch?.Invoke(this, stlFile);
         }
 
 
         private async Task SendConfirmationQuestionAsync()
         {
-            var message = String.Format(resourceManager.GetString("InputConfirmation", currentCulture), printObject);
+            var message = String.Format(resourceManager.GetString("InputConfirmation", currentCulture), stlFile);
 
             await SendMessageAsync(message,CustomKeyboards.NoYesKeyboard, ParseMode.Markdown);
         }
@@ -200,7 +203,7 @@ namespace PrintAssistConsole
 
                             if (((StartPrint)intent).response.QueryResult.Parameters.Fields.ContainsKey("object"))
                             {
-                                printObject = new String(((StartPrint)intent).response.QueryResult.Parameters.Fields["object"].StringValue);
+                                stlFile = new String(((StartPrint)intent).response.QueryResult.Parameters.Fields["object"].StringValue);
                             }
                         }
 
@@ -220,19 +223,27 @@ namespace PrintAssistConsole
                             }
                             var path = update.Message.Document.FileName;
                             
-                            using FileStream fileStream = new FileStream(path, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Write);
-                            {
-                                var tmp = await bot.GetInfoAndDownloadFileAsync(update.Message.Document.FileId, fileStream);
-                            }
 
                             if (Path.GetExtension(update.Message.Document.FileName) == ".stl")
                             {
+                                path = Path.Combine(".\\Models", path);
+                                using FileStream fileStream = new FileStream(path, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Write);
+                                {
+                                    var tmp = await bot.GetInfoAndDownloadFileAsync(update.Message.Document.FileId, fileStream);
+                                }
+
                                 selectedModelUrl = Path.GetFullPath(path); 
                                 await machine.FireAsync(Trigger.STLFileAvailable);
                             }
                             else if (Path.GetExtension(update.Message.Document.FileName) == ".gcode")
                             {
-                                await SendMessageAsync("got gcode");
+                                path = Path.Combine(".\\Gcode", path);
+                                using FileStream fileStream = new FileStream(path, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Write);
+                                {
+                                    var tmp = await bot.GetInfoAndDownloadFileAsync(update.Message.Document.FileId, fileStream);
+                                }
+                                //await SendMessageAsync("got gcode");
+                                selectedModelUrl = Path.GetFullPath(path);
                                 await machine.FireAsync(Trigger.GCodeFileAvailable);
                             }
                             else
@@ -276,20 +287,26 @@ namespace PrintAssistConsole
                             }
                             var path = update.Message.Document.FileName;
 
-                            using FileStream fileStream = new FileStream(path, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Write);
-                            {
-                                var tmp = await bot.GetInfoAndDownloadFileAsync(update.Message.Document.FileId, fileStream);
-                            }
-
                             if (Path.GetExtension(update.Message.Document.FileName) == ".stl")
                             {
+                                path = Path.Combine(".\\Models", path);
+                                using FileStream fileStream = new FileStream(path, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Write);
+                                {
+                                    var tmp = await bot.GetInfoAndDownloadFileAsync(update.Message.Document.FileId, fileStream);
+                                }
+
                                 selectedModelUrl = Path.GetFullPath(path);
                                 await machine.FireAsync(Trigger.STLFileAvailable);
                             }
                             else if (Path.GetExtension(update.Message.Document.FileName) == ".gcode")
                             {
+                                path = Path.Combine(".\\Gcode", path);
+                                using FileStream fileStream = new FileStream(path, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Write);
+                                {
+                                    var tmp = await bot.GetInfoAndDownloadFileAsync(update.Message.Document.FileId, fileStream);
+                                }
+                                //await SendMessageAsync("got gcode");
                                 selectedModelUrl = Path.GetFullPath(path);
-                                await SendMessageAsync("got gcode");
                                 await machine.FireAsync(Trigger.GCodeFileAvailable);
                             }
                             else
@@ -430,13 +447,17 @@ namespace PrintAssistConsole
 
         public async Task StartAsync()
         {
-            if(string.IsNullOrEmpty(printObject))
+            if(string.IsNullOrEmpty(stlFile) && string.IsNullOrEmpty(gcodeFile))
             {
                 await machine.FireAsync(Trigger.AskForFile);
             }
-            else
+            else if(!string.IsNullOrEmpty(stlFile) && string.IsNullOrEmpty(gcodeFile))
             {
                 await machine.FireAsync(Trigger.ConfirmInput);
+            }
+            else if(!string.IsNullOrEmpty(gcodeFile))
+            {
+
             }
         }
     }

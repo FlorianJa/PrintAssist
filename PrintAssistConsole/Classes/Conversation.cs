@@ -40,7 +40,8 @@ namespace PrintAssistConsole
             SliceLater,
             SearchModel,
             StartPrint,
-            SearchAborted
+            SearchAborted,
+            GcodeFileReceived
         }
 
         public Int64 Id { get; private set; }
@@ -79,7 +80,7 @@ namespace PrintAssistConsole
             }
         }
 
-        public Conversation(Int64 id, ITelegramBotClient bot, string culture = "en-US")
+        public Conversation(Int64 id, ITelegramBotClient bot, string culture = "de-DE")
         {
             Id = id;
             this.bot = bot;
@@ -117,13 +118,15 @@ namespace PrintAssistConsole
                 .Permit(Trigger.StartWorkflowTutorial, ConversationState.WorkflowTutorial)
                 .Permit(Trigger.StartHardwareTutorial, ConversationState.HardwareTutorial)
                 .Permit(Trigger.STLFileReceived, ConversationState.STLFileReceived)
+                .Permit(Trigger.GcodeFileReceived, ConversationState.GcodeFileReceived)
                 .Permit(Trigger.SearchModel, ConversationState.SearchModel)
                 .Permit(Trigger.StartPrint, ConversationState.CollectDataForPrint);
 
             machine.Configure(ConversationState.CollectDataForPrint)
                 .OnEntryAsync(async () => await StartCollectingDataForPrintingAsync())
                 .Permit(Trigger.StartSlicing, ConversationState.Slicing)
-                .Permit(Trigger.SearchModel, ConversationState.SearchModel);
+                .Permit(Trigger.SearchModel, ConversationState.SearchModel)
+                .Permit(Trigger.StartPrint, ConversationState.CheckBeforePrint);
 
             machine.Configure(ConversationState.HardwareTutorial)
                 .OnEntryAsync(async () => await StartHardwareTutorialAsync())
@@ -141,6 +144,11 @@ namespace PrintAssistConsole
                 .OnEntryAsync(async () => await StartWorkflowTutorialAsync())
                 .Permit(Trigger.WorkTutorialCanceled, ConversationState.Idle)
                 .Permit(Trigger.WorkTutorialFinished, ConversationState.Idle);
+
+            machine.Configure(ConversationState.GcodeFileReceived)
+                .OnEntryAsync(async () => await AskForPrintNowAsync())
+                .Permit(Trigger.Cancel, ConversationState.Idle)
+                .Permit(Trigger.StartPrint, ConversationState.CheckBeforePrint);
 
             machine.Configure(ConversationState.STLFileReceived)
                 .OnEntryAsync(async () => await AskForSlicingNowAsync())
@@ -242,16 +250,17 @@ namespace PrintAssistConsole
 
         private async Task StartCollectingDataForPrintingAsync()
         {
-            collectingDataForPrintingDialog = new CollectPrintInformationDialog(Id, bot, printObject, contexts, resourceManager,currentCulture);
+            collectingDataForPrintingDialog = new CollectPrintInformationDialog(Id, bot, printObject, lastGcodeFile, contexts, resourceManager, currentCulture);
             collectingDataForPrintingDialog.StartModelSearch += CollectingDataForPrintingDialog_StartModelSearch;
             collectingDataForPrintingDialog.StartSlicing += CollectingDataForPrintingDialog_StartSlicing;
             collectingDataForPrintingDialog.StartPrinting += CollectingDataForPrintingDialog_StartPrinting;
             await collectingDataForPrintingDialog.StartAsync();
         }
 
-        private void CollectingDataForPrintingDialog_StartPrinting(object sender, string e)
+        private async void CollectingDataForPrintingDialog_StartPrinting(object sender, string e)
         {
-            throw new NotImplementedException();
+            lastGcodeFile = e;
+            await machine.FireAsync(Trigger.StartPrint);
         }
 
         private async void CollectingDataForPrintingDialog_StartSlicing(object sender, string e)
@@ -314,10 +323,11 @@ namespace PrintAssistConsole
 
         private async void SlicingProcess_SlicingProcessCompletedWithStartPrint(object sender, string gcodeLink)
         {
-            await machine.FireAsync(Trigger.SlicingCompletedWithPrintStart);
+            
             var gcodeUri = new Uri("http://localhost:5003" + gcodeLink);
             await DownloadGcodeAsync(gcodeUri);
-            
+
+            await machine.FireAsync(Trigger.SlicingCompletedWithPrintStart);
         }
 
         private async Task<bool> DownloadGcodeAsync(Uri remotelocaltion, string fileName = null)
@@ -354,6 +364,12 @@ namespace PrintAssistConsole
         private async void SlicingProcess_SlicingProcessWithoutCompleted(object sender, EventArgs e)
         {
             await machine.FireAsync(Trigger.SlicingCompletedWithoutPrintStart);
+        }
+
+        private async Task AskForPrintNowAsync()
+        {
+            //await SendMessageAsync("I got your model. Do you want to slice it now?", CustomKeyboards.NoYesKeyboard);
+            await SendMessageAsync(resourceManager.GetString("GcodeRecieved", currentCulture), CustomKeyboards.NoYesKeyboard);
         }
 
         private async Task AskForSlicingNowAsync()
@@ -438,20 +454,31 @@ namespace PrintAssistConsole
                         {
                             if (update.Message.Document != null)
                             {
-                                var path = update.Message.Document.FileName;
-                                using FileStream fileStream = new FileStream(path, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Write);
-                                {
-                                    var tmp = await bot.GetInfoAndDownloadFileAsync(update.Message.Document.FileId, fileStream);
-                                }
 
+                                var path = update.Message.Document.FileName;
+                                
                                 if (Path.GetExtension(update.Message.Document.FileName) == ".stl")
                                 {
                                     selectedModelUrl = Path.GetFullPath(path); // this should be done after the user confirmed to slice the file now.
+                                    path = Path.Combine(".\\Models", path);
+
+                                    using FileStream fileStream = new FileStream(path, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Write);
+                                    {
+                                        var tmp = await bot.GetInfoAndDownloadFileAsync(update.Message.Document.FileId, fileStream);
+                                    }
+
                                     await machine.FireAsync(Trigger.STLFileReceived);
+                                
                                 }
                                 else if (Path.GetExtension(update.Message.Document.FileName) == ".gcode")
                                 {
-                                    await SendMessageAsync("got gcode");
+                                    path = Path.Combine(".\\Gcode", path);
+                                    lastGcodeFile = path;
+                                    using FileStream fileStream = new FileStream(path, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Write);
+                                    {
+                                        var tmp = await bot.GetInfoAndDownloadFileAsync(update.Message.Document.FileId, fileStream);
+                                    }
+                                    await machine.FireAsync(Trigger.GcodeFileReceived);
                                 }
                                 else
                                 {
@@ -613,6 +640,29 @@ namespace PrintAssistConsole
                                 case TutorialYes:
                                     {
                                         await machine.FireAsync(Trigger.StartSlicing);
+                                        break;
+                                    }
+                                case TutorialNo:
+                                    {
+                                        //await SendMessageAsync("Okay, I will store it for you. You can ask me later to slice it.");
+                                        await SendMessageAsync(resourceManager.GetString("StoringFile", currentCulture));
+                                        await machine.FireAsync(Trigger.Cancel);
+                                        break;
+                                    }
+                                default:
+                                    break;
+                            }
+
+                            break;
+                        }
+                    case ConversationState.GcodeFileReceived:
+                        {
+                            var intent = await IntentDetector.Instance.CallDFAPIAsync(Id, update.Message.Text, "TutorialStarten-followup"); //reuse the Yes No intents from the tutorial
+                            switch (intent)
+                            {
+                                case TutorialYes:
+                                    {
+                                        await machine.FireAsync(Trigger.StartPrint);
                                         break;
                                     }
                                 case TutorialNo:

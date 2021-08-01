@@ -141,6 +141,9 @@
   <data name="FileTooBig" xml:space="preserve">
     <value>Die Datei ist leider zu groß für mich. Ich unterstütze aktuell nur Dateien mit bis zu 20 MB</value>
   </data>
+  <data name="GcodeRecieved" xml:space="preserve">
+    <value>Ich hab deine Datei erhalten. Möchtest du sie jetzt drucken?</value>
+  </data>
   <data name="greeting" xml:space="preserve">
     <value>Hi. Ich bin dein persönlicher 3D Druckassistent. Ich kann dir den Drucker und den 3D Druck Workflow erklären, 3D Modelle im Internet für dich suchen, Modelle für den Drucker vorbereiten und den Druck starten.</value>
   </data>

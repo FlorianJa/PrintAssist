@@ -21,6 +21,7 @@ namespace PrintAssistConsole
         SearchModel,
         AskToSliceSelectedFile,
         CollectDataForPrint,
-        HardwareTutorialFinished
+        HardwareTutorialFinished,
+        GcodeFileReceived
     }
 }
