@@ -12,10 +12,10 @@ namespace PrintAssistConsole
     {
         public Dictionary<HardwareTutorialState,Message> messages { get; set; }
 
-        public HardwareTutorialDataProvider()
+        public HardwareTutorialDataProvider(string path)
         {
             // deserialize JSON directly from a file
-            using (StreamReader streamReader = File.OpenText(@".\BotContent\HardwareTutorial_de.json"))
+            using (StreamReader streamReader = File.OpenText(path))
             {
                 using (var jsonReader = new JsonTextReader(streamReader))
                 {

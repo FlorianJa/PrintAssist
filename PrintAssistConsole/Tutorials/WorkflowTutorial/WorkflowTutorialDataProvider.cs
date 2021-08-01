@@ -12,10 +12,10 @@ namespace PrintAssistConsole
     {
         public Dictionary<WorkflowTutorialState, Message> messages { get; set; }
 
-        public WorkflowTutorialDataProvider()
+        public WorkflowTutorialDataProvider(string path)
         {
             // deserialize JSON directly from a file
-            using (StreamReader streamReader = File.OpenText(@".\BotContent\WorkflowTutorial_de.json"))
+            using (StreamReader streamReader = File.OpenText(path))
             {
                 using (var jsonReader = new JsonTextReader(streamReader))
                 {

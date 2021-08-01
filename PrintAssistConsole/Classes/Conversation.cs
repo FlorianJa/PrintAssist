@@ -364,7 +364,7 @@ namespace PrintAssistConsole
 
         private async Task StartWorkflowTutorialAsync()
         {
-            ITutorialDataProvider data = new WorkflowTutorialDataProvider();
+            ITutorialDataProvider data = new WorkflowTutorialDataProvider(resourceManager.GetString("WorkflowTutorialFilePath", currentCulture));
             var tutorial = new WorkflowTutorial(Id, bot, data);
             tutorial.Finished += Tutorial_Finished;
             this.tutorial = tutorial;
@@ -378,7 +378,7 @@ namespace PrintAssistConsole
 
         private async Task StartHardwareTutorialAsync()
         {
-            ITutorialDataProvider data = new HardwareTutorialDataProvider();
+            ITutorialDataProvider data = new HardwareTutorialDataProvider(resourceManager.GetString("HardwareTutorialFilePath", currentCulture));
             var tutorial = new HardwareTutorial(Id, bot, data);
             this.tutorial = tutorial;
             tutorial.TutorialFinished += Tutorial_TutorialFinished;

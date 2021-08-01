@@ -117,6 +117,9 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <data name="activated" xml:space="preserve">
+    <value>aktiviert</value>
+  </data>
   <data name="CalibrationFinished" xml:space="preserve">
     <value>Die Kalibrierung ist abgeschlossen. Der Drucker heizt auf seine finale Betriebstempertur auf. Es geht gleich los.</value>
   </data>
@@ -126,17 +129,74 @@
   <data name="CurrentState" xml:space="preserve">
     <value>Aktueller Status:</value>
   </data>
+  <data name="deactivated" xml:space="preserve">
+    <value>deaktiviert</value>
+  </data>
   <data name="greeting" xml:space="preserve">
     <value>Hi. Ich bin dein persönlicher 3D Druckassistent. Ich kann dir den Drucker und den 3D Druck Workflow erklären, 3D Modelle im Internet für dich suchen, Modelle für den Drucker vorbereiten und den Druck starten.</value>
   </data>
+  <data name="GuidedFineDetails" xml:space="preserve">
+    <value>Für feine Details veringere ich die Druckgeschwindigkeit etwas.</value>
+  </data>
+  <data name="GuidedMoreInfill" xml:space="preserve">
+    <value>Mehr Infill wird die Stabilität des Objets erhöhen.</value>
+  </data>
+  <data name="GuidedNoFineDetails" xml:space="preserve">
+    <value>Okay, dann können wir mit normaler Druckgegeschwindigkeit drucken.</value>
+  </data>
+  <data name="GuidedNormalInfill" xml:space="preserve">
+    <value>Okay, dann reicht ein geringerer Füllgrad von 15%.</value>
+  </data>
+  <data name="GuidedSupportOff" xml:space="preserve">
+    <value>Bei Objekten ohne Überhängen können Supportstrukturen deaktiviert werden.</value>
+  </data>
+  <data name="GuidedSupportOn" xml:space="preserve">
+    <value>Bei Objekten mit Überhängen sollten Supportstrukturen aktiviert werden.</value>
+  </data>
+  <data name="GuidedSurfaceNormal" xml:space="preserve">
+    <value>Okay, dann reicht eine höhere Schichthöhe von 0,25 mm</value>
+  </data>
+  <data name="GuidedSurfaceSmooth" xml:space="preserve">
+    <value>Für eine glatte Oberfläche wähle ich eine geringe Schichthöhe von 0,1 mm.</value>
+  </data>
+  <data name="HardwareTutorialFilePath" xml:space="preserve">
+    <value>.\BotContent\HardwareTutorial_de.json</value>
+  </data>
   <data name="Homing" xml:space="preserve">
     <value>Der Druck fährt nun zu seiner Startposition und führt anschließend seine automatische Kalibrierung aus.</value>
+  </data>
+  <data name="InfillPercentage" xml:space="preserve">
+    <value>Füllgrad</value>
+  </data>
+  <data name="InvalidInfillPercentage" xml:space="preserve">
+    <value>Deine Eingabe nicht gültig. Das Infill muss zwischen 0% und 100% betragen.</value>
+  </data>
+  <data name="InvalidInfillPercentageFormat" xml:space="preserve">
+    <value>Bitte wähle eine Füllmenge aus der Auswahl unten aus oder gibt die Zahl in Prozent ein.</value>
+  </data>
+  <data name="InvalidLayerHeight" xml:space="preserve">
+    <value>Deine Eingabe nicht gültig. Die Layer Height muss zwischen 0,05 mm und 0.3 mm betragen.</value>
+  </data>
+  <data name="InvalidLayerHeightFormat" xml:space="preserve">
+    <value>Bitte wähle eine Layer Height aus der Auswahl unten aus oder gibt die Zahl in Millimeter ein.</value>
+  </data>
+  <data name="InvalidProfile" xml:space="preserve">
+    <value>Ungültiges Profil.</value>
+  </data>
+  <data name="LayerHeight" xml:space="preserve">
+    <value>Schichthöhe</value>
   </data>
   <data name="Next" xml:space="preserve">
     <value>Weiter</value>
   </data>
   <data name="Nozzle" xml:space="preserve">
     <value>Düse</value>
+  </data>
+  <data name="ParameterSummary" xml:space="preserve">
+    <value>Übersicht zu den wichtigsten Parametern:</value>
+  </data>
+  <data name="PrintDuration" xml:space="preserve">
+    <value>Druckdauer</value>
   </data>
   <data name="PrintStarting" xml:space="preserve">
     <value>Es geht los!</value>
@@ -150,6 +210,18 @@
   <data name="SliceNowQuestion" xml:space="preserve">
     <value>Möchtest du die Datei jetzt slicen und drucken?</value>
   </data>
+  <data name="SlicingDialogDataPath" xml:space="preserve">
+    <value>.\BotContent\SlicingProcess_de.json</value>
+  </data>
+  <data name="SlicingFinished" xml:space="preserve">
+    <value>Slicing abgeschlossen.</value>
+  </data>
+  <data name="SlicingInProgress" xml:space="preserve">
+    <value>Slicing läuft</value>
+  </data>
+  <data name="SlicingModeSelection" xml:space="preserve">
+    <value>Bitte wähe einen Slicingmode aus [Expert/Beginner] oder sag abbrechen, wenn du den Vorgang abbrechen möchtest.</value>
+  </data>
   <data name="StartIdleMessage" xml:space="preserve">
     <value>Was kann ich für dich tun?</value>
   </data>
@@ -158,5 +230,17 @@
   </data>
   <data name="StoringFile" xml:space="preserve">
     <value>Okay, ich passe auf die Datei auf. Du kannst mich später nochmal fragen.</value>
+  </data>
+  <data name="Support" xml:space="preserve">
+    <value>Supportstrukturen</value>
+  </data>
+  <data name="SupportIs" xml:space="preserve">
+    <value>Supportstrukturen</value>
+  </data>
+  <data name="UsedFilament" xml:space="preserve">
+    <value>Benötigtes Filament</value>
+  </data>
+  <data name="WorkflowTutorialFilePath" xml:space="preserve">
+    <value>.\BotContent\WorkflowTutorial_de.json</value>
   </data>
 </root>

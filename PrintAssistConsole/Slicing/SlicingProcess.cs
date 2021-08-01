@@ -5,8 +5,10 @@ using SlicingCLI;
 using Stateless;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Resources;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -84,6 +86,8 @@ namespace PrintAssistConsole
         private bool objectNeedsToHandleMechanicalForces;
         private PrusaSlicerCLICommands cliCommands = null;
         private string modelName;
+        private readonly ResourceManager resourceManager;
+        private readonly CultureInfo currentCulture;
         private int counter;
         private int progessMessageId;
         private Timer Timer;
@@ -99,13 +103,15 @@ namespace PrintAssistConsole
         public event EventHandler SlicingProcessCompletedWithoutStartPrint;
         public event EventHandler<string> SlicingProcessCompletedWithStartPrint;
 
-        public SlicingProcess(long chatId, ITelegramBotClient bot, string modelPath, string modelName)
+        public SlicingProcess(long chatId, ITelegramBotClient bot, string modelPath, string modelName, ResourceManager resourceManager, CultureInfo currentCulture)
         {
-            dialogData = new SlicingDialogDataProvider();
+            dialogData = new SlicingDialogDataProvider(resourceManager.GetString("SlicingDialogDataPath", currentCulture));
             this.bot = bot;
             this.id = chatId;
             this.modelPath = modelPath;
             this.modelName = modelName;
+            this.resourceManager = resourceManager;
+            this.currentCulture = currentCulture;
 
             // Instantiate a new state machine in the Start state
             machine = new StateMachine<SlicingProcessState, Trigger>(SlicingProcessState.BeforeStart);
@@ -141,17 +147,17 @@ namespace PrintAssistConsole
 
             machine.Configure(SlicingProcessState.ExpertModeLayerHeight)
                 .OnEntryAsync(async () => await SendMessageAsync(machine.State))
-                .OnExit(async () => await SendMessageAsync($"Schichthöhe = {layerHeight:F2} mm"))
+                .OnExit(async () => await SendMessageAsync($"{resourceManager.GetString("LayerHeight", currentCulture)} = {layerHeight:F2} mm"))
                 .Permit(Trigger.Next, SlicingProcessState.ExpertModeInfill);
 
             machine.Configure(SlicingProcessState.ExpertModeInfill)
                 .OnEntryAsync(async () => await SendMessageAsync(machine.State))
-                .OnExitAsync(async () => await SendMessageAsync($"Füllgrad = {fillDensity}%"))
+                .OnExitAsync(async () => await SendMessageAsync($"{resourceManager.GetString("InfillPercentage", currentCulture)} = {fillDensity}%"))
                 .Permit(Trigger.Next, SlicingProcessState.ExpertModeSupport);
 
             machine.Configure(SlicingProcessState.ExpertModeSupport)
                 .OnEntryAsync(async () => await SendMessageAsync(machine.State))
-                .OnExitAsync(async () => await SendMessageAsync($"Support = {supportMaterial}"))
+                .OnExitAsync(async () => await SendMessageAsync($"{resourceManager.GetString("Support", currentCulture)} = {supportMaterial}"))
                 .Permit(Trigger.Next, SlicingProcessState.MoreParameters);
 
             machine.Configure(SlicingProcessState.MoreParameters)
@@ -263,21 +269,21 @@ namespace PrintAssistConsole
 
         private async Task SendSlicingParameterSummaryMessageAsync()
         {
-            string message = "Übersicht zu den wichtigsten Parametern:" + Environment.NewLine;
+            string message = resourceManager.GetString("ParameterSummary", currentCulture) + Environment.NewLine;
 
             if(isPrototype)
             {
-                message += "Schichthöhe = 0.3mm" + Environment.NewLine;
-                message += $"Füllgrad = {cliCommands.FillDensity}" + Environment.NewLine;
-                message += "Supportstrukturen sind ";
-                message += objectHasOverhangs ? "aktiviert.": "deaktiviert.";
+                message += $"{resourceManager.GetString("LayerHeight", currentCulture)} = 0.3mm" + Environment.NewLine;
+                message += $"{resourceManager.GetString("InfillPercentage", currentCulture)} = {cliCommands.FillDensity}" + Environment.NewLine;
+                message += $"{resourceManager.GetString("SupportIs", currentCulture)} ";
+                message += objectHasOverhangs ? $"{resourceManager.GetString("activated", currentCulture)}.": $"{resourceManager.GetString("deactivated", currentCulture)}.";
             }
             else
             {
-                message += $"Schichthöhe = {cliCommands.LayerHeight}" + Environment.NewLine;
-                message += $"Füllgrad = {cliCommands.FillDensity}" + Environment.NewLine;
-                message += $"Supportstrukturen sind = ";
-                message += (bool)cliCommands.SupportMaterial ? " aktiviert." : " deaktiviert.";
+                message += $"{resourceManager.GetString("LayerHeight", currentCulture)} = {cliCommands.LayerHeight}" + Environment.NewLine;
+                message += $"{resourceManager.GetString("InfillPercentage", currentCulture)} = {cliCommands.FillDensity}" + Environment.NewLine;
+                message += $"{resourceManager.GetString("SupportIs", currentCulture)} ";
+                message += (bool)cliCommands.SupportMaterial ? $"{resourceManager.GetString("activated", currentCulture)}." : $"{resourceManager.GetString("deactivated", currentCulture)}.";
             }
             await SendMessageAsync(message);
             await machine.FireAsync(Trigger.Next);
@@ -312,7 +318,7 @@ namespace PrintAssistConsole
             ////var message = await SendMessageAsync("Slicing...");
 
 
-            var message = await bot.SendTextMessageAsync(id, "Slicing läuft");
+            var message = await bot.SendTextMessageAsync(id, resourceManager.GetString("SlicingInProgress", currentCulture));
             progessMessageId = message.MessageId;
 
 
@@ -326,7 +332,7 @@ namespace PrintAssistConsole
         private async void Timer_Elapsed1(object sender, ElapsedEventArgs e)
         {
             counter++;
-            var newText = "Slicing läuft" + String.Concat(Enumerable.Repeat(".", (counter % 3) + 1));
+            var newText = resourceManager.GetString("SlicingInProgress", currentCulture) + String.Concat(Enumerable.Repeat(".", (counter % 3) + 1));
             await bot.EditMessageTextAsync(id, progessMessageId, newText);
         }
         
@@ -334,10 +340,10 @@ namespace PrintAssistConsole
         {
             Timer.Stop();
             gcodeFile = args.GcodeLink;
-            var message = "Slicing abgeschlossen." + Environment.NewLine;
-            message += $"Druckdauer = {args.PrintDuration.Value.Humanize(2)}";
+            var message = resourceManager.GetString("SlicingFinished", currentCulture) + Environment.NewLine;
+            message += $"{resourceManager.GetString("PrintDuration", currentCulture)} = {args.PrintDuration.Value.Humanize(2)}";
             message += Environment.NewLine;
-            message += $"Benötigtes Filament = {args.UsedFilament:F2}m";
+            message += $"{resourceManager.GetString("UsedFilament", currentCulture)} = {args.UsedFilament:F2}m";
 
             var photos = new List<string>() { ".\\BotContent\\images\\Placeholder.png" };
             Message tmp = new Message(text: message,photos);
@@ -475,7 +481,7 @@ namespace PrintAssistConsole
                                 }
                             default:
                                 {
-                                    await SendMessageAsync("Bitte wähe einen Slicingmode aus [Expert/Beginner] oder sag abbrechen, wenn du den Vorgang abbrechen möchtest.", CustomKeyboards.ExpertBeginnerKeyboard);
+                                    await SendMessageAsync(resourceManager.GetString("SlicingModeSelection", currentCulture), CustomKeyboards.ExpertBeginnerKeyboard);
                                     break;
                                 }
                         }
@@ -492,7 +498,7 @@ namespace PrintAssistConsole
                         }
                         else
                         {
-                            await SendMessageAsync("Ungültiges Profil.");
+                            await SendMessageAsync(resourceManager.GetString("InvalidProfile", currentCulture));
                             await machine.FireAsync(Trigger.SelectingPresets);
                         }
 
@@ -574,12 +580,12 @@ namespace PrintAssistConsole
                             }
                             else
                             {
-                                await SendMessageAsync("Deine Eingabe nicht gültig. Die Layer Height muss zwischen 0,05 mm und 0.3 mm betragen.", CustomKeyboards.LayerHeightKeyboard);
+                                await SendMessageAsync(resourceManager.GetString("InvalidLayerHeight", currentCulture), CustomKeyboards.LayerHeightKeyboard);
                             }
                         }
                         else
                         {
-                            await SendMessageAsync("Bitte wähle eine Layer Height aus der Auswahl unten aus oder gibt die Zahl in Millimeter ein.", CustomKeyboards.LayerHeightKeyboard);
+                            await SendMessageAsync(resourceManager.GetString("InvalidLayerHeightFormat", currentCulture), CustomKeyboards.LayerHeightKeyboard);
                         }
 
                         break;
@@ -622,12 +628,13 @@ namespace PrintAssistConsole
                             }
                             else
                             {
-                                await SendMessageAsync("Deine Eingabe nicht gültig. Das Infill muss zwischen 0% und 100% betragen.", CustomKeyboards.InfillKeyboard);
+                                
+                                await SendMessageAsync(resourceManager.GetString("InvalidInfillPercentage", currentCulture), CustomKeyboards.InfillKeyboard);
                             }
                         }
                         else
                         {
-                            await SendMessageAsync("Bitte wähle eine Füllmenge aus der Auswahl unten aus oder gibt die Zahl in Prozent ein.");
+                            await SendMessageAsync(resourceManager.GetString("InvalidInfillPercentageFormat", currentCulture), CustomKeyboards.InfillKeyboard);
                         }
                         break;
                     }
@@ -671,13 +678,13 @@ namespace PrintAssistConsole
                             case TutorialYes:
                                 {
                                     smoothSurfaceNeeded = true;
-                                    await SendMessageAsync("Für eine glatte Oberfläche wähle ich eine geringe Schichthöhe von 0,1 mm.");
+                                    await SendMessageAsync(resourceManager.GetString("GuidedSurfaceSmooth", currentCulture));
                                     break;
                                 }
                             case TutorialNo:
                                 {
                                     smoothSurfaceNeeded = false;
-                                    await SendMessageAsync("Okay, dann reicht eine höhere Schichthöhe von 0,25 mm");
+                                    await SendMessageAsync(resourceManager.GetString("GuidedSurfaceNormal", currentCulture));
                                     break;
                                 }
                             default:
@@ -695,13 +702,13 @@ namespace PrintAssistConsole
                             case TutorialYes:
                                 {
                                     objectNeedsToHandleMechanicalForces = true;
-                                    await SendMessageAsync("Mehr Infill wird die Stabilität des Objets erhöhen.");
+                                    await SendMessageAsync(resourceManager.GetString("GuidedMoreInfill", currentCulture));
                                     break;
                                 }
                             case TutorialNo:
                                 {
                                     objectNeedsToHandleMechanicalForces = false;
-                                    await SendMessageAsync("Okay, dann reicht ein geringerer Füllgrad von 15%");
+                                    await SendMessageAsync(resourceManager.GetString("GuidedNormalInfill", currentCulture));
                                     break;
                                 }
                             default:
@@ -718,13 +725,13 @@ namespace PrintAssistConsole
                             case TutorialYes:
                                 {
                                     objectHasOverhangs = true;
-                                    await SendMessageAsync("Bei Objekten mit Überhängen sollten Supportstrukturen aktiviert werden.");
+                                    await SendMessageAsync(resourceManager.GetString("GuidedSupportOn", currentCulture));
                                     break;
                                 }
                             case TutorialNo:
                                 {
                                     objectHasOverhangs = false;
-                                    await SendMessageAsync("Bei Objekten ohne Überhängen können Supportstrukturen deaktiviert werden.");
+                                    await SendMessageAsync(resourceManager.GetString("GuidedSupportOff", currentCulture));
                                     break;
                                 }
                             default:
@@ -741,13 +748,13 @@ namespace PrintAssistConsole
                             case TutorialYes:
                                 {
                                     objectHasFineDetails = true;
-                                    await SendMessageAsync("Für feine Details veringere ich die Druckgeschwindigkeit etwas.");
+                                    await SendMessageAsync(resourceManager.GetString("GuidedFineDetails", currentCulture));
                                     break;
                                 }
                             case TutorialNo:
                                 {
                                     objectHasFineDetails = false;
-                                    await SendMessageAsync("Okay, dann können wir mit normaler Druckgegeschwindigkeit drucken.");
+                                    await SendMessageAsync(resourceManager.GetString("GuidedNoFineDetails", currentCulture));
                                     break;
                                 }
                             default:
@@ -803,10 +810,10 @@ namespace PrintAssistConsole
     {
         public Dictionary<SlicingProcessState, Message> messages { get; set; }
 
-        public SlicingDialogDataProvider()
+        public SlicingDialogDataProvider(string path)
         {
             // deserialize JSON directly from a file
-            using (StreamReader streamReader = System.IO.File.OpenText(@".\BotContent\SlicingProcess_de.json"))
+            using (StreamReader streamReader = System.IO.File.OpenText(path))
             {
                 using (var jsonReader = new JsonTextReader(streamReader))
                 {
