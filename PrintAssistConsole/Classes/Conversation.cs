@@ -4,9 +4,12 @@ using PrintAssistConsole.Intents;
 using Stateless;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Reflection;
+using System.Resources;
 using System.Text;
 using System.Threading.Tasks;
 using Telegram.Bot;
@@ -64,6 +67,10 @@ namespace PrintAssistConsole
         private readonly StateMachine<ConversationState, Trigger> machine;
         protected readonly ITelegramBotClient bot;
 
+
+        ResourceManager resourceManager;    
+        CultureInfo currentCulture;
+
         public ConversationState CurrentState
         { 
             get
@@ -72,10 +79,13 @@ namespace PrintAssistConsole
             }
         }
 
-        public Conversation(Int64 id, ITelegramBotClient bot)
+        public Conversation(Int64 id, ITelegramBotClient bot, string culture = "de-DE")
         {
             Id = id;
             this.bot = bot;
+
+            currentCulture = CultureInfo.CreateSpecificCulture(culture);
+            resourceManager = new ResourceManager("PrintAssistConsole.Properties.text", Assembly.GetExecutingAssembly());
 
             // Instantiate a new state machine in the Start state
             machine = new StateMachine<ConversationState, Trigger>(ConversationState.Connected);
@@ -94,7 +104,7 @@ namespace PrintAssistConsole
 
             machine.Configure(ConversationState.ConversationStarting)
                 .OnEntryAsync(async () => { await SendWelcomeMessageAsync(); await machine.FireAsync(Trigger.ConversationStarted); })
-                .Permit(Trigger.ConversationStarted, ConversationState.EnteringNamen);
+                .Permit(Trigger.ConversationStarted, ConversationState.Idle);
 
             machine.Configure(ConversationState.EnteringNamen)
                 .OnExitAsync(async () => await SendGreetingWithNameAsync())
@@ -103,7 +113,7 @@ namespace PrintAssistConsole
 
             machine.Configure(ConversationState.Idle)
                 //.OnEntryAsync(async () => await SendMessageAsync("What can i do for you?"))
-                .OnEntryAsync(async () => await SendMessageAsync("Was kann ich für dich tun?"))
+                .OnEntryAsync(async () => await SendMessageAsync(resourceManager.GetString("StartIdleMessage", currentCulture)))
                 .Permit(Trigger.StartWorkflowTutorial, ConversationState.WorkflowTutorial)
                 .Permit(Trigger.StartHardwareTutorial, ConversationState.HardwareTutorial)
                 .Permit(Trigger.STLFileReceived, ConversationState.STLFileReceived)
@@ -153,7 +163,7 @@ namespace PrintAssistConsole
                .Permit(Trigger.SearchAborted, ConversationState.Idle);
 
             machine.Configure(ConversationState.AskToSliceSelectedFile)
-               .OnEntryAsync(async () => await SendMessageAsync("Möchtest du die Datei jetzt slicen und drucken?", CustomKeyboards.NoYesKeyboard))
+               .OnEntryAsync(async () => await SendMessageAsync(resourceManager.GetString("SliceNowQuestion", currentCulture), CustomKeyboards.NoYesKeyboard))
                .Permit(Trigger.SliceLater, ConversationState.Idle)
                .Permit(Trigger.StartSlicing, ConversationState.Slicing);
 
@@ -187,13 +197,13 @@ namespace PrintAssistConsole
         {
             temperaturToReach = args;
             calibrationFinished = true;
-            await SendMessageAsync("Die Kalibrierung ist abgeschlossen. Der Drucker heizt auf seine finale Betriebstempertur auf. Es geht gleich los.");
+            await SendMessageAsync(resourceManager.GetString("CalibrationFinished", currentCulture));
         }
 
 
         private async void OctoprinServer_PrinterHoming(object sender, EventArgs e)
         {
-            await SendMessageAsync("Der Druck fährt nun zu seiner Startposition und führt anschließend seine automatische Kalibrierung aus.");
+            await SendMessageAsync(resourceManager.GetString("Homing", currentCulture));
         }
 
         private async void OctoprinServer_TemperatureReceived(object sender, TemperReceivedEventArgs e)
@@ -201,7 +211,7 @@ namespace PrintAssistConsole
             if(firstTemperatureReceivedMessage)
             {
                 firstTemperatureReceivedMessage = false;
-                lastTemperaturMessageString = $"Temperatur Düse: {e.ToolActual}°C/{e.ToolTarget}°C {Environment.NewLine}Temperatur Buildplate: {e.BedActual}°C/{e.BedTarget}°C";
+                lastTemperaturMessageString = $"Temperatur {resourceManager.GetString("Nozzle", currentCulture)}: {e.ToolActual}°C/{e.ToolTarget}°C {Environment.NewLine}Temperatur Buildplate: {e.BedActual}°C/{e.BedTarget}°C";
 
                 var message = await bot.SendTextMessageAsync(Id, lastTemperaturMessageString);
                 temperatureMessageId = message.MessageId;
@@ -210,7 +220,7 @@ namespace PrintAssistConsole
             {
                 try
                 {
-                    var newMessage = $"Temperatur Düse: {e.ToolActual}°C/{e.ToolTarget}°C {Environment.NewLine}Temperatur Buildplate: {e.BedActual}°C/{e.BedTarget}°C";
+                    var newMessage = $"Temperatur {resourceManager.GetString("Nozzle", currentCulture)}: {e.ToolActual}°C/{e.ToolTarget}°C {Environment.NewLine}Temperatur Buildplate: {e.BedActual}°C/{e.BedTarget}°C";
                     if (newMessage != lastTemperaturMessageString && updateTemperatureMessage)
                     {
                         await bot.EditMessageTextAsync(Id, temperatureMessageId, newMessage);
@@ -221,7 +231,7 @@ namespace PrintAssistConsole
                     {
                         temperatureReached = true;
                         updateTemperatureMessage = false;
-                        await SendMessageAsync("Es geht los!");
+                        await SendMessageAsync( resourceManager.GetString("PrintStarting", currentCulture));
                     }
                 }
                 catch (Exception ex)
@@ -236,8 +246,6 @@ namespace PrintAssistConsole
             collectingDataForPrintingDialog.StartModelSearch += CollectingDataForPrintingDialog_StartModelSearch;
             collectingDataForPrintingDialog.StartSlicing += CollectingDataForPrintingDialog_StartSlicing;
             collectingDataForPrintingDialog.StartPrinting += CollectingDataForPrintingDialog_StartPrinting;
-            //collectingDataForPrintingDialog.StartPrintWithModel += CollectingDataForPrintingDialog_StartPrintWithModel;
-            //collectingDataForPrintingDialog.StartPrintWithoutModel += CollectingDataForPrintingDialog_StartPrintWithoutModel;
             await collectingDataForPrintingDialog.StartAsync();
         }
 
@@ -259,19 +267,6 @@ namespace PrintAssistConsole
             await machine.FireAsync(Trigger.SearchModel);
             //await StartSearchModelProcessAsync();
         }
-
-        private async void CollectingDataForPrintingDialog_StartPrintWithoutModel(object sender, string e)
-        {
-            printObject = e;
-            await machine.FireAsync(Trigger.SearchModel);
-        }
-
-        private async void CollectingDataForPrintingDialog_StartPrintWithModel(object sender, string e)
-        {
-            selectedModelUrl = e; 
-            await machine.FireAsync(Trigger.StartSlicing);
-        }
-
         private async Task StartSearchModelProcessAsync()
         {
             this.searchModelProcess = new SearchModelDialog(Id, bot, printObject);
@@ -364,7 +359,7 @@ namespace PrintAssistConsole
         private async Task AskForSlicingNowAsync()
         {
             //await SendMessageAsync("I got your model. Do you want to slice it now?", CustomKeyboards.NoYesKeyboard);
-            await SendMessageAsync("Ich hab dein Modell erhalten. Möchtest du das Modell jetzt slicen?", CustomKeyboards.NoYesKeyboard);
+            await SendMessageAsync(resourceManager.GetString("StlRecieved", currentCulture), CustomKeyboards.NoYesKeyboard);
         }
 
         private async Task StartWorkflowTutorialAsync()
@@ -402,8 +397,7 @@ namespace PrintAssistConsole
 
         private async Task SendWelcomeMessageAsync()
         {
-            //await SendMessageAsync("Hi I am your print assistant. I can do stuff for you. How should i call you?");
-            await SendMessageAsync("Hi. Ich bin dein persönlicher Druckassistent. Ich kann dir den Drucker und den 3D Druck Workflow erklären, 3D Modelle für den Drucker vorbereiten und den Druck starten. Wie soll ich dich nennen?");
+            await SendMessageAsync(resourceManager.GetString("greeting", currentCulture));
         }
         private async Task<Telegram.Bot.Types.Message> SendMessageAsync(string text, IReplyMarkup replyKeyboardMarkup = null)
         {
@@ -544,7 +538,7 @@ namespace PrintAssistConsole
                                 case DefaultFallbackIntent defaultIntent:
                                     {
                                         await SendMessageAsync(defaultIntent.Process(), new ReplyKeyboardMarkup(
-                                                                                        new KeyboardButton[] { "Erklärung abbrechen", "Weiter" },
+                                                                                        new KeyboardButton[] { resourceManager.GetString("CancelExplanation", currentCulture), resourceManager.GetString("Next", currentCulture) },
                                                                                         resizeKeyboard: true));
                                         break;
                                     }
@@ -624,7 +618,7 @@ namespace PrintAssistConsole
                                 case TutorialNo:
                                     {
                                         //await SendMessageAsync("Okay, I will store it for you. You can ask me later to slice it.");
-                                        await SendMessageAsync("Okay, ich passe auf die Datei auf. Du kannst mich später nochmal fragen.");
+                                        await SendMessageAsync(resourceManager.GetString("StoringFile", currentCulture));
                                         await machine.FireAsync(Trigger.Cancel);
                                         break;
                                     }
@@ -652,7 +646,7 @@ namespace PrintAssistConsole
                                 case AskToSliceFileNo:
                                     {
                                         //await SendMessageAsync("Okay, I will store it for you. You can ask me later to slice it.");
-                                        await SendMessageAsync("Okay, ich passe auf die Datei auf. Du kannst mich später nochmal fragen.");
+                                        await SendMessageAsync(resourceManager.GetString("StoringFile", currentCulture));
                                         await machine.FireAsync(Trigger.SliceLater);
                                         break;
                                     }
@@ -679,12 +673,12 @@ namespace PrintAssistConsole
                                         await bot.SendPhotoAsync(Id, new Telegram.Bot.Types.InputFiles.InputOnlineFile(snapshot));
 
                                         var jobinfo = await octoprinServer.JobOpertations.GetJobInformationAsync();
-                                        var message = "Aktueller Status:" + Environment.NewLine +
-                                                      $"Fortschritt: {jobinfo.progress.completion:F0}%" + Environment.NewLine;
+                                        var message = resourceManager.GetString("CurrentState", currentCulture) + Environment.NewLine +
+                                                      $"{resourceManager.GetString("Progess", currentCulture)}: {jobinfo.progress.completion:F0}%" + Environment.NewLine;
                                         
                                         if (jobinfo.progress.printTimeLeft.HasValue)
                                         {
-                                            message += $"Restliche Druckdauer: {TimeSpan.FromSeconds(jobinfo.progress.printTimeLeft.Value).Humanize()}";
+                                            message += $"{resourceManager.GetString("RemainingTime", currentCulture)}: {TimeSpan.FromSeconds(jobinfo.progress.printTimeLeft.Value).Humanize()}";
                                         }
 
                                         await SendMessageAsync(message);
@@ -699,21 +693,7 @@ namespace PrintAssistConsole
                         break;
                 }
             }
-            //else if(update.Type == UpdateType.CallbackQuery)
-            //{
-            //    if (searchModelProcess != null)
-            //    {
-            //        await searchModelProcess.HandleCallbackQueryAsync(update);
-            //    }
-                
-                
-
-
-            //}
-
         }
-
-     
 
         private void AssignUserName(string name)
         {
