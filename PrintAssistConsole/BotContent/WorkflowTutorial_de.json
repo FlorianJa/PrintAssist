@@ -16,11 +16,11 @@
 	},
 	3:
 	{
-		"text": "Im Slicing-Prozess können viele verschiedene Parameter einstellen werden, die sich auf die Qualität, Stabilität und Druckdauer des Objekts auswirken. (3/10)",
+		"text": "Im Slicing-Prozess können viele verschiedene Parameter eingestellen werden, die sich auf die Qualität, Stabilität und Druckdauer des Objekts auswirken. (3/10)",
 		"KeyboardButtons": [ [ "Erklärung abbrechen", "Weiter" ] ]
 	},
 	4: {
-		"text": "Die Qualität der Oberfläche wird hauptsächlich durch die Schichthöhe beeinflusst. Je dünner die Schicht ist, desto glatter ist die Oberfläche. Dieser Drucker kann Schichthöhen zwischen 0,07 mm und 0,3 mm drucken. (4/10)",
+		"text": "Die Qualität der Oberfläche wird hauptsächlich durch die Schichthöhe beeinflusst. Je dünner die Schichten sind, desto glatter ist die Oberfläche. Dieser Drucker kann Schichthöhen zwischen 0,05 mm und 0,3 mm drucken. (4/10)",
 		"photoFilePaths": [ ".\\BotContent\\images\\LayerHeights.png", ".\\BotContent\\images\\0.05mmLayer.png", ".\\BotContent\\images\\0.2mmLayer.png", ".\\BotContent\\images\\0.3mmLayer.png" ],
 		"KeyboardButtons": [ [ "Erklärung abbrechen", "Weiter" ] ]
 	},
@@ -38,7 +38,7 @@
 	},
 	7:
 	{
-		"text": "Du kannst das Slicing mit einer Slicing-Software auf deinem PC durchführen oder du kannst mir dein Modell schicken und ich werde es für mit dir slicen. (7/10)",
+		"text": "Du kannst das Slicing mit einer Slicing-Software auf deinem PC durchführen oder du kannst mir dein Modell schicken und ich werde es mit dir slicen. (7/10)",
 		"KeyboardButtons": [ [ "Erklärung abbrechen", "Weiter" ] ]
 	},
 	8:
@@ -58,7 +58,7 @@
 	},
 	11:
 	{
-		"text": "Dies war ein kurzer Überblick über den 3D-Druck-Workflow.?",
+		"text": "Dies war ein kurzer Überblick über den 3D-Druck-Workflow.",
 	},
 	12:
 	{

@@ -306,7 +306,7 @@ namespace PrintAssistConsole
                 modelName = new Uri(selectedModelUrl).Segments[^1];
             }
             
-            this.slicingProcess = new SlicingProcess(Id, bot, selectedModelUrl, modelName);
+            this.slicingProcess = new SlicingProcess(Id, bot, selectedModelUrl, modelName, resourceManager, currentCulture);
             slicingProcess.SlicingProcessCompletedWithoutStartPrint += SlicingProcess_SlicingProcessWithoutCompleted;
             slicingProcess.SlicingProcessCompletedWithStartPrint += SlicingProcess_SlicingProcessCompletedWithStartPrint;
             await slicingProcess.StartAsync();
