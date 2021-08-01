@@ -3,8 +3,10 @@ using PrintAssistConsole.Intents;
 using Stateless;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Resources;
 using System.Text;
 using System.Threading.Tasks;
 using Telegram.Bot;
@@ -55,9 +57,12 @@ namespace PrintAssistConsole
         private CollectPrintInformationDialogDataProvider dialogData;
         private long id;
         private ITelegramBotClient bot;
+        private readonly string printObject1;
         private StateMachine<CollectPrintInformationState, Trigger> machine;
         private string printObject;
         private List<string> contexts;
+        private readonly ResourceManager resourceManager;
+        private readonly CultureInfo currentCulture;
         private List<string> dfContexts = new List<string>() { "PrintObjectRecognised" };
         private string selectedModelUrl;
         private CollectPrintInformationState previousState;
@@ -66,13 +71,16 @@ namespace PrintAssistConsole
         public event EventHandler<string> StartSlicing;
         public event EventHandler<string> StartPrinting;
 
-        public CollectPrintInformationDialog(long chatId, ITelegramBotClient bot, string printObject, List<string> contexts)
+        public CollectPrintInformationDialog(long chatId, ITelegramBotClient bot, string printObject, List<string> contexts, ResourceManager resourceManager, CultureInfo currentCulture)
         {
             id = chatId;
             this.bot = bot;
-            dialogData = new CollectPrintInformationDialogDataProvider();
+            printObject1 = printObject;
+            dialogData = new CollectPrintInformationDialogDataProvider(resourceManager.GetString("CollectPrintInformationDataPath", currentCulture));
             this.printObject = new String(printObject);
             this.contexts = contexts;
+            this.resourceManager = resourceManager;
+            this.currentCulture = currentCulture;
             // Instantiate a new state machine in the Start state
             machine = new StateMachine<CollectPrintInformationState, Trigger>(CollectPrintInformationState.Start);
 
@@ -90,7 +98,7 @@ namespace PrintAssistConsole
                 .Permit(Trigger.InputIncorrect, CollectPrintInformationState.EnteringObjectName);
 
             machine.Configure(CollectPrintInformationState.AskForFile)
-                .OnEntryAsync(async () => await SendMessageAsync("Hast du schon ein 3D Modell oder eine geslicte Datei? Wenn ja, kannst du sie mir einfach schicken.", CustomKeyboards.NoYesKeyboard))
+                .OnEntryAsync(async () => await SendMessageAsync(resourceManager.GetString("FileAvialable", currentCulture), CustomKeyboards.NoYesKeyboard))
                 .OnExit(() => previousState = machine.State)
                 .PermitDynamic(Trigger.NoFile, () => { return previousState == CollectPrintInformationState.ConfirmInput ? CollectPrintInformationState.SearchModel : CollectPrintInformationState.EnteringObjectName; })
                 .Permit(Trigger.FileAvailable, CollectPrintInformationState.WaitForFile)
@@ -98,9 +106,9 @@ namespace PrintAssistConsole
                 .Permit(Trigger.GCodeFileAvailable, CollectPrintInformationState.EndWithGcode);
 
             machine.Configure(CollectPrintInformationState.EnteringObjectName)
-                .OnEntryFromAsync(Trigger.NoFile, async () => await SendMessageAsync("Was möchtest du drucken?"))
-                .OnEntryFromAsync(Trigger.InputCorrect, async () => await SendMessageAsync("Was möchtest du drucken?"))
-                .OnEntryFromAsync(Trigger.NewSearchTerm, async () => await SendMessageAsync("Bitte gib einen neuen Suchbegriff ein"))
+                .OnEntryFromAsync(Trigger.NoFile, async () => await SendMessageAsync(resourceManager.GetString("WhatToPrint", currentCulture)))
+                .OnEntryFromAsync(Trigger.InputCorrect, async () => await SendMessageAsync(resourceManager.GetString("WhatToPrint", currentCulture)))
+                .OnEntryFromAsync(Trigger.NewSearchTerm, async () => await SendMessageAsync(resourceManager.GetString("NewSearchTerm", currentCulture)))
                 .OnExit(() => previousState = machine.State)
                 .Permit(Trigger.InputEntered, CollectPrintInformationState.ConfirmInput);
 
@@ -118,7 +126,7 @@ namespace PrintAssistConsole
                 .OnEntry(() => StartPrinting?.Invoke(this, selectedModelUrl));
 
             machine.Configure(CollectPrintInformationState.WaitForFile)
-                .OnEntryAsync(async () => await SendMessageAsync("Okay. Schick mir bitte die Datei.", new ReplyKeyboardRemove()))
+                .OnEntryAsync(async () => await SendMessageAsync(resourceManager.GetString("SendFile", currentCulture), new ReplyKeyboardRemove()))
                 .Permit(Trigger.STLFileAvailable, CollectPrintInformationState.EndWithSTL)
                 .Permit(Trigger.GCodeFileAvailable, CollectPrintInformationState.EndWithGcode);
 
@@ -134,7 +142,8 @@ namespace PrintAssistConsole
 
         private async Task SendConfirmationQuestionAsync()
         {
-            var message = $"Du möchtest *{printObject}* drucken. Habe ich dich richtig verstanden?";
+            var message = String.Format(resourceManager.GetString("InputConfirmation", currentCulture), printObject);
+
             await SendMessageAsync(message,CustomKeyboards.NoYesKeyboard, ParseMode.Markdown);
         }
 
@@ -206,7 +215,7 @@ namespace PrintAssistConsole
                         {
                             if(update.Message.Document.FileSize >= 20000000) //20MB
                             {
-                                await SendMessageAsync("Die Datei ist leider zu groß für mich. Ich unterstütze aktuell nur Dateien mit bis zu 20 MB");
+                                await SendMessageAsync(resourceManager.GetString("FileTooBig", currentCulture));
                                 return;
                             }
                             var path = update.Message.Document.FileName;
@@ -262,7 +271,7 @@ namespace PrintAssistConsole
                         {
                             if (update.Message.Document.FileSize >= 20000000) //20MB
                             {
-                                await SendMessageAsync("Die Datei ist leider zu groß für mich. Ich unterstütze aktuell nur Dateien mit bis zu 20 MB");
+                                await SendMessageAsync(resourceManager.GetString("FileTooBig", currentCulture));
                                 return;
                             }
                             var path = update.Message.Document.FileName;
@@ -437,10 +446,10 @@ namespace PrintAssistConsole
     {
         public Dictionary<StartPrintProcessState, Message> messages { get; set; }
 
-        public CollectPrintInformationDialogDataProvider()
+        public CollectPrintInformationDialogDataProvider(string path)
         {
             // deserialize JSON directly from a file
-            using (StreamReader streamReader = System.IO.File.OpenText(@".\BotContent\CollectPrintInformationDialog.json"))
+            using (StreamReader streamReader = System.IO.File.OpenText(path))
             {
                 using (var jsonReader = new JsonTextReader(streamReader))
                 {

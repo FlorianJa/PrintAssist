@@ -4,8 +4,10 @@ using PrintAssistConsole.Intents;
 using Stateless;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Resources;
 using System.Text;
 using System.Threading.Tasks;
 using Telegram.Bot;
@@ -54,18 +56,24 @@ namespace PrintAssistConsole
         private ITelegramBotClient bot;
         private long id;
         private string localGcodePath;
+        private readonly ResourceManager resourceManager;
+        private readonly CultureInfo currentCulture;
         private StateMachine<StartPrintProcessState, Trigger> machine;
         private List<string> dfContexts = new List<string>() { "startprintprocedure" };
 
         public event EventHandler PrintStarted;
         public event EventHandler StartPrintCanceled;
         
-        public StartPrintProcess(long chatId, ITelegramBotClient bot, string localGcodePath)
+        public StartPrintProcess(long chatId, ITelegramBotClient bot, string localGcodePath, ResourceManager resourceManager, CultureInfo currentCulture)
         {
-            dialogData = new StartPrintDialogDataProvider();
+            this.localGcodePath = localGcodePath;
+            this.resourceManager = resourceManager;
+            this.currentCulture = currentCulture;
+
+            dialogData = new StartPrintDialogDataProvider(resourceManager.GetString("StartPrintDialogDataPath", currentCulture));
             this.bot = bot;
             this.id = chatId;
-            this.localGcodePath = localGcodePath;
+            
 
             // Instantiate a new state machine in the Start state
             machine = new StateMachine<StartPrintProcessState, Trigger>(StartPrintProcessState.BeforeStart);
@@ -525,10 +533,10 @@ namespace PrintAssistConsole
     {
         public Dictionary<StartPrintProcessState, Message> messages { get; set; }
 
-        public StartPrintDialogDataProvider()
+        public StartPrintDialogDataProvider(string path)
         {
             // deserialize JSON directly from a file
-            using (StreamReader streamReader = System.IO.File.OpenText(@".\BotContent\StartPrintingProcess_de.json"))
+            using (StreamReader streamReader = System.IO.File.OpenText(path))
             {
                 using (var jsonReader = new JsonTextReader(streamReader))
                 {

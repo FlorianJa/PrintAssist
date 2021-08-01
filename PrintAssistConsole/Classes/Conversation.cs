@@ -242,7 +242,7 @@ namespace PrintAssistConsole
 
         private async Task StartCollectingDataForPrintingAsync()
         {
-            collectingDataForPrintingDialog = new CollectPrintInformationDialog(Id, bot, printObject, contexts);
+            collectingDataForPrintingDialog = new CollectPrintInformationDialog(Id, bot, printObject, contexts, resourceManager,currentCulture);
             collectingDataForPrintingDialog.StartModelSearch += CollectingDataForPrintingDialog_StartModelSearch;
             collectingDataForPrintingDialog.StartSlicing += CollectingDataForPrintingDialog_StartSlicing;
             collectingDataForPrintingDialog.StartPrinting += CollectingDataForPrintingDialog_StartPrinting;
@@ -269,7 +269,7 @@ namespace PrintAssistConsole
         }
         private async Task StartSearchModelProcessAsync()
         {
-            this.searchModelProcess = new SearchModelDialog(Id, bot, printObject);
+            this.searchModelProcess = new SearchModelDialog(Id, bot, resourceManager,currentCulture, printObject);
             searchModelProcess.SearchAborted += SearchModelProcess_SearchAborted;
             searchModelProcess.SearchCompleted += SearchModelProcess_SearchCompleted;
             await searchModelProcess.StartAsync();
@@ -288,7 +288,7 @@ namespace PrintAssistConsole
 
         private async Task CheckbeforePrintDialog()
         {
-            this.startPrintProcess = new StartPrintProcess(Id, bot, lastGcodeFile);
+            this.startPrintProcess = new StartPrintProcess(Id, bot, lastGcodeFile, resourceManager, currentCulture);
             startPrintProcess.PrintStarted += StartPrintProcess_PrintStarted;
             await startPrintProcess.StartAsync();
         }

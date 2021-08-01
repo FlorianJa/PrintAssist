@@ -22,12 +22,12 @@
 
   <ItemGroup>
     <EmbeddedResource Update="Properties\text.de-DE.resx">
-      <Generator>PublicResXFileCodeGenerator</Generator>
+      <Generator></Generator>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <CustomToolNamespace></CustomToolNamespace>
     </EmbeddedResource>
     <EmbeddedResource Update="Properties\text.en-US.resx">
-      <Generator>ResXFileCodeGenerator</Generator>
+      <Generator></Generator>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </EmbeddedResource>
   </ItemGroup>

@@ -13,6 +13,8 @@ using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.InputFiles;
 using PrintAssistConsole.ThingiverseAPI;
 using Telegram.Bot.Types.ReplyMarkups;
+using System.Resources;
+using System.Globalization;
 
 namespace PrintAssistConsole
 {
@@ -55,6 +57,8 @@ namespace PrintAssistConsole
         private int pageCount = 10;
         private int currentSearchPage = 1;
         private string searchTerm;
+        private readonly ResourceManager resourceManager;
+        private readonly CultureInfo currentCulture;
         private int selectionMessageId;
         private int fileId;
         private string imageUrl;
@@ -64,12 +68,14 @@ namespace PrintAssistConsole
         public event EventHandler SearchAborted;
         public event EventHandler<Tuple<string,string>> SearchCompleted;
 
-        public SearchModelDialog(long chatId, ITelegramBotClient bot, string searchTerm = null)
+        public SearchModelDialog(long chatId, ITelegramBotClient bot, ResourceManager resourceManager, CultureInfo currentCulture, string searchTerm = null)
         {
             id = chatId;
             this.bot = bot;
-            dialogData = new SearchModelDialogDataProvider();
+            dialogData = new SearchModelDialogDataProvider(resourceManager.GetString("SearchModelDialogPath", currentCulture));
             this.searchTerm = searchTerm;
+            this.resourceManager = resourceManager;
+            this.currentCulture = currentCulture;
             // Instantiate a new state machine in the Start state
             machine = new StateMachine<SearchModelState, Trigger>(SearchModelState.Start);
 
@@ -100,11 +106,16 @@ namespace PrintAssistConsole
 
         private async Task StartSearch()
         {
-            await SendMessageAsync($"Ok, ich suche nach: *{searchTerm}*", ParseMode.Markdown);
+            
+
+            var message = String.Format(resourceManager.GetString("SearchingForModel", currentCulture), searchTerm);
+
+            await SendMessageAsync(message, ParseMode.Markdown);
             things = await ThingiverseAPIWrapper.SearchThingsAsync(searchTerm, currentSearchPage, pageCount);
             if (things != null)
             {
-                await SendMessageAsync($"Ich habe {things.TotalHits} Ergebnisse gefunden. Benutze die Pfeil-Buttons unter dem Bild um durch die Suchergebnisse zu navigieren. Wenn dir ein Modell gefällt, klicke auf \"Auswählen\".", CustomKeyboards.AbortSearchNewSearchTermKeyboard);
+                var message2 = String.Format(resourceManager.GetString("SearchResultSummary", currentCulture), things.TotalHits);
+                await SendMessageAsync(message2, CustomKeyboards.AbortSearchNewSearchTermKeyboard);
                 currentImage = 0;
                 (fileId, imageUrl) = await ThingiverseAPIWrapper.GetImageURLByThingId(things.Hits[0].Id);
                 var tmp = await bot.SendPhotoAsync(chatId: id, photo: new InputOnlineFile(new Uri(imageUrl)), caption: things.Hits[currentImage].Name, replyMarkup: CustomKeyboards.SelectNextInlineKeyboard);
@@ -113,7 +124,9 @@ namespace PrintAssistConsole
             }
             else
             {
-                await SendMessageAsync($"Ich habe keine Ergebnisse für *{searchTerm}* gefunden. Probier es mit einem anderen Begriff", ParseMode.Markdown);
+                var message3 = String.Format(resourceManager.GetString("NoResults", currentCulture), searchTerm);
+
+                await SendMessageAsync(message3, ParseMode.Markdown);
             }
         }
 
@@ -380,10 +393,10 @@ namespace PrintAssistConsole
     {
         public Dictionary<StartPrintProcessState, Message> messages { get; set; }
 
-        public SearchModelDialogDataProvider()
+        public SearchModelDialogDataProvider(string path)
         {
             // deserialize JSON directly from a file
-            using (StreamReader streamReader = System.IO.File.OpenText(@".\BotContent\SearchModelDialog_de.json"))
+            using (StreamReader streamReader = System.IO.File.OpenText(path))
             {
                 using (var jsonReader = new JsonTextReader(streamReader))
                 {

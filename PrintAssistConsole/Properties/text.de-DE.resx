@@ -126,11 +126,20 @@
   <data name="CancelExplanation" xml:space="preserve">
     <value>Erklärung abbrechen</value>
   </data>
+  <data name="CollectPrintInformationDataPath" xml:space="preserve">
+    <value>.\BotContent\CollectPrintInformationDialog.json</value>
+  </data>
   <data name="CurrentState" xml:space="preserve">
     <value>Aktueller Status:</value>
   </data>
   <data name="deactivated" xml:space="preserve">
     <value>deaktiviert</value>
+  </data>
+  <data name="FileAvialable" xml:space="preserve">
+    <value>Hast du schon ein 3D Modell oder eine geslicte Datei? Wenn ja, kannst du sie mir einfach schicken.</value>
+  </data>
+  <data name="FileTooBig" xml:space="preserve">
+    <value>Die Datei ist leider zu groß für mich. Ich unterstütze aktuell nur Dateien mit bis zu 20 MB</value>
   </data>
   <data name="greeting" xml:space="preserve">
     <value>Hi. Ich bin dein persönlicher 3D Druckassistent. Ich kann dir den Drucker und den 3D Druck Workflow erklären, 3D Modelle im Internet für dich suchen, Modelle für den Drucker vorbereiten und den Druck starten.</value>
@@ -168,6 +177,9 @@
   <data name="InfillPercentage" xml:space="preserve">
     <value>Füllgrad</value>
   </data>
+  <data name="InputConfirmation" xml:space="preserve">
+    <value>Du möchtest *{0}* drucken. Habe ich dich richtig verstanden?</value>
+  </data>
   <data name="InvalidInfillPercentage" xml:space="preserve">
     <value>Deine Eingabe nicht gültig. Das Infill muss zwischen 0% und 100% betragen.</value>
   </data>
@@ -186,8 +198,14 @@
   <data name="LayerHeight" xml:space="preserve">
     <value>Schichthöhe</value>
   </data>
+  <data name="NewSearchTerm" xml:space="preserve">
+    <value>Bitte gib einen neuen Suchbegriff ein</value>
+  </data>
   <data name="Next" xml:space="preserve">
     <value>Weiter</value>
+  </data>
+  <data name="NoResults" xml:space="preserve">
+    <value>Ich habe keine Ergebnisse für *{0}* gefunden. Probier es mit einem anderen Begriff</value>
   </data>
   <data name="Nozzle" xml:space="preserve">
     <value>Düse</value>
@@ -207,6 +225,18 @@
   <data name="RemainingTime" xml:space="preserve">
     <value>Restliche Druckdauer</value>
   </data>
+  <data name="SearchingForModel" xml:space="preserve">
+    <value>Ok, ich suche nach: *0*</value>
+  </data>
+  <data name="SearchModelDialogPath" xml:space="preserve">
+    <value>.\BotContent\SearchModelDialog_de.json</value>
+  </data>
+  <data name="SearchResultSummary" xml:space="preserve">
+    <value>Ich habe {0} Ergebnisse gefunden. Benutze die Pfeil-Buttons unter dem Bild um durch die Suchergebnisse zu navigieren. Wenn dir ein Modell gefällt, klicke auf "Auswählen".</value>
+  </data>
+  <data name="SendFile" xml:space="preserve">
+    <value>Okay. Schick mir bitte die Datei.</value>
+  </data>
   <data name="SliceNowQuestion" xml:space="preserve">
     <value>Möchtest du die Datei jetzt slicen und drucken?</value>
   </data>
@@ -225,6 +255,9 @@
   <data name="StartIdleMessage" xml:space="preserve">
     <value>Was kann ich für dich tun?</value>
   </data>
+  <data name="StartPrintDialogDataPath" xml:space="preserve">
+    <value>.\BotContent\StartPrintingProcess_de.json</value>
+  </data>
   <data name="StlRecieved" xml:space="preserve">
     <value>Ich hab dein Modell erhalten. Möchtest du das Modell jetzt slicen?</value>
   </data>
@@ -239,6 +272,9 @@
   </data>
   <data name="UsedFilament" xml:space="preserve">
     <value>Benötigtes Filament</value>
+  </data>
+  <data name="WhatToPrint" xml:space="preserve">
+    <value>Was möchtest du drucken?</value>
   </data>
   <data name="WorkflowTutorialFilePath" xml:space="preserve">
     <value>.\BotContent\WorkflowTutorial_de.json</value>
