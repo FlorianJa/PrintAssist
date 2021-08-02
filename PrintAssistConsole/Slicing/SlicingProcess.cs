@@ -66,7 +66,8 @@ namespace PrintAssistConsole
             No,
             SelectingPresets,
             PresetSelcted,
-            AdvancedSupportEntered
+            AdvancedSupportEntered,
+            SliceAgain
         }
 
         private readonly SlicingDialogDataProvider dialogData;
@@ -130,7 +131,7 @@ namespace PrintAssistConsole
             ////.OnEntryAsync(async () => ) 
 
             machine.Configure(SlicingProcessState.ModeSelection)
-                .OnEntryAsync(async () => await SendMessageAsync(machine.State))
+                .OnEntryAsync(async () => { await SendMessageAsync(machine.State); cliCommands = null; })
                 .Permit(Trigger.SelectingPresets, SlicingProcessState.SelectingPreset)
                 .Permit(Trigger.SelectingExpertMode, SlicingProcessState.ExpertModeLayerHeight)
                 .Permit(Trigger.SelectingGuidedMode, SlicingProcessState.GuidedModePrototype);
@@ -178,6 +179,7 @@ namespace PrintAssistConsole
             machine.Configure(SlicingProcessState.SlicingServiceCompleted)
                .OnEntryAsync(async () => await SendMessageAsync(machine.State))
                .Permit(Trigger.No, SlicingProcessState.DontPrintAfterSclicing)
+               .Permit(Trigger.SliceAgain, SlicingProcessState.ModeSelection)
                .Permit(Trigger.Yes, SlicingProcessState.StartPrinting);
 
             machine.Configure(SlicingProcessState.DontPrintAfterSclicing)
@@ -778,6 +780,11 @@ namespace PrintAssistConsole
                             case TutorialNo:
                                 {
                                     await machine.FireAsync(Trigger.No);
+                                    break;
+                                }
+                            case SliceAgain:
+                                {
+                                    await machine.FireAsync(Trigger.SliceAgain);
                                     break;
                                 }
                             default:

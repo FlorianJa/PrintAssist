@@ -24,7 +24,7 @@
   },
   14: {
     "text": "Möchtest du den Druck jetzt starten?",
-    "KeyboardButtons": [ [ "Nein", "Ja" ] ]
+    "KeyboardButtons": [ [ "Nein","Neu slicen", "Ja" ] ]
   },
   16: {
     "text": "Okay. Ich passe auf die Datei auf. Du kannst mich später noch mal fragen."
@@ -63,7 +63,7 @@
     "KeyboardButtons": [ [ "Ja", "Nein" ] ]
   },
   21: {
-    "text": "Möchtest du noch weitere Paramter einstellen?",
+    "text": "Möchtest du noch weitere Parameter einstellen?",
     "KeyboardButtons": [ [ "Ja", "Nein" ] ]
   },
   22: {

@@ -80,7 +80,7 @@ namespace PrintAssistConsole
             }
         }
 
-        public Conversation(Int64 id, ITelegramBotClient bot, string culture = "en-US")
+        public Conversation(Int64 id, ITelegramBotClient bot, string culture = "de-DE")
         {
             Id = id;
             this.bot = bot;

@@ -7,6 +7,15 @@ using System.Threading.Tasks;
 
 namespace PrintAssistConsole.Intents
 {
+    [IntentAttribute("SliceAgain")]
+    public class SliceAgain : BaseIntent
+    {
+        public override string Process()
+        {
+            throw new NotImplementedException();
+        }
+    }
+
     [IntentAttribute("SlicingModeSelection.Guided")]
     public class SlicingModeSelectionGuided : BaseIntent
     {
