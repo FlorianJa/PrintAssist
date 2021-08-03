@@ -67,7 +67,8 @@ namespace PrintAssistConsole
             SelectingPresets,
             PresetSelcted,
             AdvancedSupportEntered,
-            SliceAgain
+            SliceAgain,
+            Reentry
         }
 
         private readonly SlicingDialogDataProvider dialogData;
@@ -134,7 +135,8 @@ namespace PrintAssistConsole
                 .OnEntryAsync(async () => { await SendMessageAsync(machine.State); cliCommands = null; })
                 .Permit(Trigger.SelectingPresets, SlicingProcessState.SelectingPreset)
                 .Permit(Trigger.SelectingExpertMode, SlicingProcessState.ExpertModeLayerHeight)
-                .Permit(Trigger.SelectingGuidedMode, SlicingProcessState.GuidedModePrototype);
+                .Permit(Trigger.SelectingGuidedMode, SlicingProcessState.GuidedModePrototype)
+                .PermitReentry(Trigger.Reentry);
 
             machine.Configure(SlicingProcessState.SelectingPreset)
                 .OnEntryAsync(async () => await SendMessageAsync(machine.State))
@@ -159,7 +161,8 @@ namespace PrintAssistConsole
             machine.Configure(SlicingProcessState.ExpertModeSupport)
                 .OnEntryAsync(async () => await SendMessageAsync(machine.State))
                 .OnExitAsync(async () => await SendMessageAsync($"{resourceManager.GetString("Support", currentCulture)} = {supportMaterial}"))
-                .Permit(Trigger.Next, SlicingProcessState.MoreParameters);
+                .Permit(Trigger.Next, SlicingProcessState.MoreParameters)
+                .PermitReentry(Trigger.Reentry);
 
             machine.Configure(SlicingProcessState.MoreParameters)
                 .OnEntryAsync(async () => await SendMessageAsync(machine.State))
@@ -180,7 +183,8 @@ namespace PrintAssistConsole
                .OnEntryAsync(async () => await SendMessageAsync(machine.State))
                .Permit(Trigger.No, SlicingProcessState.DontPrintAfterSclicing)
                .Permit(Trigger.SliceAgain, SlicingProcessState.ModeSelection)
-               .Permit(Trigger.Yes, SlicingProcessState.StartPrinting);
+               .Permit(Trigger.Yes, SlicingProcessState.StartPrinting)
+               .PermitReentry(Trigger.Reentry);
 
             machine.Configure(SlicingProcessState.DontPrintAfterSclicing)
                .OnEntryAsync(async () => { await SendMessageAsync(machine.State); SlicingProcessCompletedWithoutStartPrint?.Invoke(this, null); });
@@ -193,24 +197,29 @@ namespace PrintAssistConsole
             machine.Configure(SlicingProcessState.GuidedModePrototype)
                 .OnEntryAsync(async () => await SendMessageAsync(machine.State))
                 .Permit(Trigger.No, SlicingProcessState.GuidedModeSurfaceSelection)
-                .Permit(Trigger.Yes, SlicingProcessState.GuidedModeOverhangs);
+                .Permit(Trigger.Yes, SlicingProcessState.GuidedModeOverhangs)
+                .PermitReentry(Trigger.Reentry);
 
             machine.Configure(SlicingProcessState.GuidedModeSurfaceSelection)
                 .OnEntryAsync(async () => await SendMessageAsync(machine.State))
-                .Permit(Trigger.Next, SlicingProcessState.GuidedModeMechanicalForce);
+                .Permit(Trigger.Next, SlicingProcessState.GuidedModeMechanicalForce)
+                .PermitReentry(Trigger.Reentry);
 
             machine.Configure(SlicingProcessState.GuidedModeMechanicalForce)
                 .OnEntryAsync(async () => await SendMessageAsync(machine.State))
-                .Permit(Trigger.Next, SlicingProcessState.GuidedModeOverhangs);
+                .Permit(Trigger.Next, SlicingProcessState.GuidedModeOverhangs)
+                .PermitReentry(Trigger.Reentry);
 
             machine.Configure(SlicingProcessState.GuidedModeOverhangs)
                 .OnEntryAsync(async () => await SendMessageAsync(machine.State))
                 .PermitIf(Trigger.Next, SlicingProcessState.GuidedModeDetails, () => { return isPrototype == false; })
-                .PermitIf(Trigger.Next, SlicingProcessState.guidedModeSummary, () => { return isPrototype == true; });
+                .PermitIf(Trigger.Next, SlicingProcessState.guidedModeSummary, () => { return isPrototype == true; })
+                .PermitReentry(Trigger.Reentry);
 
             machine.Configure(SlicingProcessState.GuidedModeDetails)
                .OnEntryAsync(async () => await SendMessageAsync(machine.State))
-               .Permit(Trigger.Next, SlicingProcessState.guidedModeSummary);
+               .Permit(Trigger.Next, SlicingProcessState.guidedModeSummary)
+               .PermitReentry(Trigger.Reentry);
 
             machine.Configure(SlicingProcessState.guidedModeSummary)
                 .OnEntryAsync(async () => { CalculateSlicingParameters(); await SendSlicingParameterSummaryMessageAsync(); })
@@ -481,10 +490,17 @@ namespace PrintAssistConsole
                                     await machine.FireAsync(Trigger.SelectingGuidedMode);
                                     break;
                                 }
+                            case DefaultFallbackIntent fallbackIntent:
+                                {
+                                    await SendMessageAsync(fallbackIntent.Process());
+                                    await machine.FireAsync(Trigger.Reentry);
+                                    return;
+                                }
                             default:
                                 {
-                                    await SendMessageAsync(resourceManager.GetString("SlicingModeSelection", currentCulture), CustomKeyboards.ExpertBeginnerKeyboard);
-                                    break;
+                                    await machine.FireAsync(Trigger.Reentry);
+                                    //await SendMessageAsync(resourceManager.GetString("SlicingModeSelection", currentCulture), CustomKeyboards.ExpertBeginnerKeyboard);
+                                    return;
                                 }
                         }
                         break;
@@ -521,8 +537,15 @@ namespace PrintAssistConsole
                                     supportMaterial = false;
                                     break;
                                 }
+                            case DefaultFallbackIntent fallbackIntent:
+                                {
+                                    await SendMessageAsync(fallbackIntent.Process());
+                                    await machine.FireAsync(Trigger.Reentry);
+                                    return;
+                                }
                             default:
-                                break;
+                                await machine.FireAsync(Trigger.PresetSelcted);
+                                return;
                         }
                         await machine.FireAsync(Trigger.AdvancedSupportEntered);
                         break;
@@ -542,7 +565,14 @@ namespace PrintAssistConsole
                                     await machine.FireAsync(Trigger.No);
                                     break;
                                 }
+                            case DefaultFallbackIntent fallbackIntent:
+                                {
+                                    await SendMessageAsync(fallbackIntent.Process());
+                                    await machine.FireAsync(Trigger.Reentry);
+                                    return;
+                                }
                             default:
+                                
                                 break;
                         }
                         break;
@@ -557,9 +587,10 @@ namespace PrintAssistConsole
                                     await machine.FireAsync(Trigger.Next);
                                     break;
                                 }
-                            case DefaultFallbackIntent fallback:
+                            
+                            case DefaultFallbackIntent fallbackIntent:
                                 {
-                                    fallback.Process();
+                                    await SendMessageAsync(fallbackIntent.Process());
                                     break;
                                 }
                             default:
@@ -609,8 +640,15 @@ namespace PrintAssistConsole
                                     await machine.FireAsync(Trigger.No);
                                     break;
                                 }
+                            case DefaultFallbackIntent fallbackIntent:
+                                {
+                                    await SendMessageAsync(fallbackIntent.Process());
+                                    await machine.FireAsync(Trigger.Reentry);
+                                    return;
+                                }
                             default:
-                                break;
+                                await machine.FireAsync(Trigger.SelectingGuidedMode);
+                                return;
                         }
                         break;
                     }
@@ -655,8 +693,16 @@ namespace PrintAssistConsole
                                     supportMaterial = false;
                                     break;
                                 }
+                            case DefaultFallbackIntent fallbackIntent:
+                                {
+                                    await SendMessageAsync(fallbackIntent.Process());
+                                    await machine.FireAsync(Trigger.Reentry);
+                                    return;
+                                }
+
                             default:
-                                break;
+                                await machine.FireAsync(Trigger.Reentry);
+                                return;
                         }
                         await machine.FireAsync(Trigger.Next);
 
@@ -689,8 +735,16 @@ namespace PrintAssistConsole
                                     await SendMessageAsync(resourceManager.GetString("GuidedSurfaceNormal", currentCulture));
                                     break;
                                 }
+                            case DefaultFallbackIntent fallbackIntent:
+                                {
+                                    await SendMessageAsync(fallbackIntent.Process());
+                                    await machine.FireAsync(Trigger.Reentry);
+                                    return;
+                                }
+
                             default:
-                                break;
+                                await machine.FireAsync(Trigger.Reentry);
+                                return;
                         }
                         await machine.FireAsync(Trigger.Next);
 
@@ -713,8 +767,15 @@ namespace PrintAssistConsole
                                     await SendMessageAsync(resourceManager.GetString("GuidedNormalInfill", currentCulture));
                                     break;
                                 }
+                            case DefaultFallbackIntent fallbackIntent:
+                                {
+                                    await SendMessageAsync(fallbackIntent.Process());
+                                    await machine.FireAsync(Trigger.Reentry);
+                                    return;
+                                }
                             default:
-                                break;
+                                await machine.FireAsync(Trigger.Reentry);
+                                return;
                         }
                         await machine.FireAsync(Trigger.Next);
                         break;
@@ -736,8 +797,15 @@ namespace PrintAssistConsole
                                     await SendMessageAsync(resourceManager.GetString("GuidedSupportOff", currentCulture));
                                     break;
                                 }
+                            case DefaultFallbackIntent fallbackIntent:
+                                {
+                                    await SendMessageAsync(fallbackIntent.Process());
+                                    await machine.FireAsync(Trigger.Reentry);
+                                    return;
+                                }
                             default:
-                                break;
+                                await machine.FireAsync(Trigger.Reentry);
+                                return;
                         }
                         await machine.FireAsync(Trigger.Next);
                         break;
@@ -759,8 +827,15 @@ namespace PrintAssistConsole
                                     await SendMessageAsync(resourceManager.GetString("GuidedNoFineDetails", currentCulture));
                                     break;
                                 }
+                            case DefaultFallbackIntent fallbackIntent:
+                                {
+                                    await SendMessageAsync(fallbackIntent.Process());
+                                    await machine.FireAsync(Trigger.Reentry);
+                                    return;
+                                }
                             default:
-                                break;
+                                await machine.FireAsync(Trigger.Reentry);
+                                return;
                         }
                         await machine.FireAsync(Trigger.Next);
                         break;
@@ -787,7 +862,14 @@ namespace PrintAssistConsole
                                     await machine.FireAsync(Trigger.SliceAgain);
                                     break;
                                 }
+                            case DefaultFallbackIntent fallbackIntent:
+                                {
+                                    await SendMessageAsync(fallbackIntent.Process());
+                                    await machine.FireAsync(Trigger.Reentry);
+                                    break;
+                                }
                             default:
+                                await machine.FireAsync(Trigger.Reentry);
                                 break;
                         }
                         

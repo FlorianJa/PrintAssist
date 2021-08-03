@@ -427,7 +427,7 @@ namespace PrintAssistConsole
         public async Task HandleUserInputAsync(Update update)
         {
            
-            if (update.Type == UpdateType.Message || update.Type == UpdateType.CallbackQuery) //only react on normal messages, ignores edited messages.
+            if ((update.Type == UpdateType.Message &&update.Message.Text != null) || update.Type == UpdateType.CallbackQuery) //only react on normal messages, ignores edited messages.
             {
                 switch (machine.State)
                 {
@@ -540,8 +540,22 @@ namespace PrintAssistConsole
                                             break;
                                         }
                                     default:
-                                        if(intent != null) await SendMessageAsync("Intent detected:" + intent.GetType() + ". There is no implementation for this intent yet.");
-                                        break;
+                                        {
+                                            if (intent != null)
+                                            {
+                                                try
+                                                {
+                                                    await SendMessageAsync(((BaseIntent)intent).Process());
+
+                                                }
+                                                catch (Exception)
+                                                {
+                                                    await SendMessageAsync("Intent detected:" + intent.GetType() + ". There is no implementation for this intent yet.");
+
+                                                }
+                                            }
+                                            break;
+                                        }
                                 }
                             }
                             break;
@@ -570,7 +584,10 @@ namespace PrintAssistConsole
                                         break;
                                     }
                                 default:
-                                    break;
+                                    {
+                                        await SendMessageAsync("Das kann ich leider noch nicht.");
+                                        break;
+                                    }
                             }
 
                             break;
@@ -613,8 +630,18 @@ namespace PrintAssistConsole
                                         await machine.FireAsync(Trigger.WorkTutorialCanceled);
                                         break;
                                     }
+                                case DefaultFallbackIntent defaultIntent:
+                                    {
+                                        await SendMessageAsync(defaultIntent.Process(), new ReplyKeyboardMarkup(
+                                                                                        new KeyboardButton[] { resourceManager.GetString("CancelExplanation", currentCulture), resourceManager.GetString("Next", currentCulture) },
+                                                                                        resizeKeyboard: true));
+                                        break;
+                                    }
                                 default:
-                                    break;
+                                    {
+                                        await SendMessageAsync("Das kann ich leider noch nicht.");
+                                        break;
+                                    }
                             }
                             break;
                         }
@@ -742,6 +769,10 @@ namespace PrintAssistConsole
                     default:
                         break;
                 }
+            }
+            else if(update.Type == UpdateType.Message && update.Message.Voice != null)
+            {
+                await SendMessageAsync("Sprachnachrichten unterstütze ich noch nicht :(");
             }
         }
 

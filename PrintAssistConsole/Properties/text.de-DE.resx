@@ -175,7 +175,7 @@
     <value>.\BotContent\HardwareTutorial_de.json</value>
   </data>
   <data name="Homing" xml:space="preserve">
-    <value>Der Druck fährt nun zu seiner Startposition und führt anschließend seine automatische Kalibrierung aus.</value>
+    <value>Der Drucker fährt nun zu seiner Startposition und führt anschließend seine automatische Kalibrierung aus.</value>
   </data>
   <data name="InfillPercentage" xml:space="preserve">
     <value>Füllgrad</value>
