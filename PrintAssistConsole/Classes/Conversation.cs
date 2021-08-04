@@ -427,7 +427,7 @@ namespace PrintAssistConsole
         public async Task HandleUserInputAsync(Update update)
         {
            
-            if ((update.Type == UpdateType.Message &&update.Message.Text != null) || update.Type == UpdateType.CallbackQuery) //only react on normal messages, ignores edited messages.
+            if ((update.Type == UpdateType.Message &&update.Message.Text != null) || update.Type == UpdateType.CallbackQuery || update.Message.Document != null) //only react on normal messages, ignores edited messages.
             {
                 switch (machine.State)
                 {
