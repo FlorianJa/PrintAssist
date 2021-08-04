@@ -1,4 +1,4 @@
-﻿using Humanizer;
+using Humanizer;
 using OctoPrintConnector;
 using PrintAssistConsole.Intents;
 using Stateless;
@@ -585,7 +585,7 @@ namespace PrintAssistConsole
                                     }
                                 default:
                                     {
-                                        await SendMessageAsync("Das kann ich leider noch nicht.");
+                                        await SendMessageAsync("Das kann ich leider an dieser Stelle noch nicht.");
                                         break;
                                     }
                             }
@@ -639,7 +639,7 @@ namespace PrintAssistConsole
                                     }
                                 default:
                                     {
-                                        await SendMessageAsync("Das kann ich leider noch nicht.");
+                                        await SendMessageAsync("Das kann ich leider an dieser Stelle noch nicht.");
                                         break;
                                     }
                             }
