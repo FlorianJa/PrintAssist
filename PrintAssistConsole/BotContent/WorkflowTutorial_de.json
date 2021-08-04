@@ -32,7 +32,7 @@
 	},
 	6:
 	{
-		"text": "Da der Drucker nicht in die Luft drucken kann, müssen Objekte mit Überhängen sogenannte Stützstrukturen hinzufügen. Stützstrukturen sind zusätzliches Material, welches nach dem Druck entfernt werden muss. (6/10)",
+		"text": "Da der Drucker nicht in die Luft drucken kann, müssen Objekten mit Überhängen sogenannte Stützstrukturen hinzugefügen werden. Stützstrukturen sind zusätzliches Material, welches nach dem Druck entfernt werden muss. (6/10)",
 		"photoFilePaths": [ ".\\BotContent\\images\\Overhangs.jpg" ],
 		"KeyboardButtons": [ [ "Erklärung abbrechen", "Weiter" ] ]
 	},

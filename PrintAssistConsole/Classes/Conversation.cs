@@ -1,4 +1,4 @@
-using Humanizer;
+﻿using Humanizer;
 using OctoPrintConnector;
 using PrintAssistConsole.Intents;
 using Stateless;
