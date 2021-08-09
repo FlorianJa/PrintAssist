@@ -136,7 +136,7 @@
     <value>deaktiviert</value>
   </data>
   <data name="FileAvialable" xml:space="preserve">
-    <value>Hast du schon ein 3D Modell oder eine geslicte Datei? Wenn ja, kannst du sie mir einfach schicken.</value>
+    <value>Hast du schon ein 3D Modell oder eine Gcode-Datei? Wenn ja, kannst du sie mir einfach schicken.</value>
   </data>
   <data name="FileTooBig" xml:space="preserve">
     <value>Die Datei ist leider zu groß für mich. Ich unterstütze aktuell nur Dateien mit bis zu 20 MB</value>
@@ -157,13 +157,13 @@
     <value>Okay, dann können wir mit normaler Druckgegeschwindigkeit drucken.</value>
   </data>
   <data name="GuidedNormalInfill" xml:space="preserve">
-    <value>Okay, dann reicht ein geringerer Füllgrad von 15%.</value>
+    <value>Okay, dann reicht ein geringer Füllgrad von 20%.</value>
   </data>
   <data name="GuidedSupportOff" xml:space="preserve">
-    <value>Bei Objekten ohne Überhängen können Supportstrukturen deaktiviert werden.</value>
+    <value>Bei Objekten ohne Überhängen deaktiviere ich die Supportstrukturen um Material und Zeit zu sparen.</value>
   </data>
   <data name="GuidedSupportOn" xml:space="preserve">
-    <value>Bei Objekten mit Überhängen sollten Supportstrukturen aktiviert werden.</value>
+    <value>Bei Objekten mit Überhängen aktiviere ich Supportstrukturen damit das Objekt fehlerfrei ausgedruckt wird.</value>
   </data>
   <data name="GuidedSurfaceNormal" xml:space="preserve">
     <value>Okay, dann reicht eine höhere Schichthöhe von 0,25 mm</value>

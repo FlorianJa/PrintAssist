@@ -30,7 +30,7 @@
     "text": "Okay. Ich passe auf die Datei auf. Du kannst mich später noch mal fragen."
   },
   2: {
-    "text": "Okay, lass uns anfangen. Handelt es sich um einen Testdruck von einem Prototypen?",
+    "text": "Okay, lass uns anfangen. Handelt es sich um einen Testdruck?",
     "KeyboardButtons": [ [ "Nein", "Ja" ] ]
   },
   10: {

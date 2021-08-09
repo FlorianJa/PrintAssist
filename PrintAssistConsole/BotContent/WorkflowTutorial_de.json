@@ -6,12 +6,12 @@
 	},
 	1:
 	{
-		"text": "Zunächst benötigst du ein 3D-Modell des Objekts, welches du herstellen willst. Du kannst ein eigenes Modell erstellen oder ein Modell aus dem Internet herunterladen. Ich kann für dich auch im Internet nach 3D-Modellen suchen. (1/10)",
+		"text": "Zunächst benötigst du ein 3D-Modell. Du kannst ein eigenes Modell erstellen oder ein Modell aus dem Internet herunterladen. Ich kann für dich auch im Internet nach 3D-Modellen suchen. (1/10)",
 		"KeyboardButtons": [ [ "Erklärung abbrechen", "Weiter" ] ]
 	},
 	2:
 	{
-		"text": "Als Nächstes muss das Modell in Maschinencode umwandeln werden, damit der Drucker weiß, was er zu tun hat. Dieser Vorgang wird als Slicing bezeichnet. Das Modell wird in dünne Schichten geschnitten und die Bewegungen des Druckers werden berechnet. (2/10)",
+		"text": "Als Nächstes muss das Modell in Maschinencode umwandelt werden, damit der Drucker weiß, was er zu tun hat. Dieser Vorgang wird als Slicing bezeichnet. Das Modell wird in dünne Schichten geschnitten und die Bewegungen des Druckers werden berechnet. (2/10)",
 		"KeyboardButtons": [ [ "Erklärung abbrechen", "Weiter" ] ]
 	},
 	3:
@@ -26,7 +26,7 @@
 	},
 	5:
 	{
-		"text": "Um Material zu sparen und die Druckzeit zu verkürzen, werden 3D-gedruckte Objekte meistens nicht massiv gedruckt. Es können verschiedene Füllmuster und Füllgrade auswählen. Ein höherer Füllgrad erhöht die Stabilität, aber auch die Druckdauer. (5/10)",
+		"text": "Um Material zu sparen und die Druckzeit zu verkürzen, werden 3D-gedruckte Objekte meistens nicht massiv gedruckt. Es können verschiedene Füllmuster und Füllgrade ausgewählt werden. Ein hoher Füllgrad erhöht die Stabilität, aber auch die Druckdauer. (5/10)",
 		"photoFilePaths": [ ".\\BotContent\\images\\InfillPattern.png", ".\\BotContent\\images\\InfillPercentage.png" ],
 		"KeyboardButtons": [ [ "Erklärung abbrechen", "Weiter" ] ]
 	},
