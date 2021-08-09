@@ -18,7 +18,7 @@
 	},
 	3:
 	{
-		"text": "Das Filament wird im Printhead auf etwa 200°C erhitzt. Das zähflüssige Material wird an der Unterseite des Hotends durch die Düse herausgedrückt. Die Düse ist während des Drucks sehr heiß und sollte nicht berührt werden! (3/6)",
+		"text": "Das Filament wird im Printhead auf etwa 200°C erhitzt. Das zähflüssige Material wird an der Unterseite des Printheads durch die Düse (Nozzle) herausgedrückt. Die Düse ist während des Drucks sehr heiß und sollte nicht berührt werden! (3/6)",
 		"photoFilePaths": [ ".\\BotContent\\images\\Printhead.jpg", ".\\BotContent\\images\\E3D-Bowden-Connector.png" ],
 		"KeyboardButtons": [ [ "Erklärung abbrechen", "Weiter" ] ]
 	},
