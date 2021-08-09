@@ -16,7 +16,7 @@
 	},
 
 	3: {
-		"text": "Ist FILAMENT TYPE geladen und ist genug Material auf der Spule?",
+		"text": "Ist PLA geladen und ist genug Material auf der Spule?",
 		"KeyboardButtons": [
 			[ "Druckstart abbrechen", "Hilfe" ],
 			[ "Nein, falsches Material geladen oder zu wenig Material auf der Spule" ],
@@ -31,11 +31,11 @@
 		"text": "Der Drucker heizt jetzt auf und startet dann gleich."
 	},
 	4: {
-		"text": "Nimm die Buildplate vom Drucker und bieg sie vorsichtig, wie im Video, damit sich die vorherigen Drucke lösen. Entfern alle Objekte von der Buildplate und reinige sie mit XX. Anschließend muss du die Buildplate wieder auf den legen.",
+		"text": "Nimm die Buildplate vom Drucker und bieg sie vorsichtig, wie im Video, damit sich die vorherigen Drucke lösen. Entfern alle Objekte von der Buildplate und reinige sie. Anschließend muss du die Buildplate wieder auf den legen.",
 		"KeyboardButtons": [[ "Druckstart abbrechen", "Buildplate ist leer und sauber" ]]
 	},
 	5: {
-		"text": "Auf der Spule sollte sich ein Sticker befinden, auf dem die wichtigsten Informationen zu dem Filament befinden. Es sollte FILAMENT TYPE sein. Eine Windung auf der Spule ist ungefähr 30 bis 40 cm. Für deinen Druck brauchst du mindestens XX Windungen.",
+		"text": "Auf der Spule sollte sich ein Sticker befinden, auf dem die wichtigsten Informationen zu dem Filament befinden. Es sollte PLA sein. Eine Windung auf der Spule ist ungefähr 30 bis 40 cm. Für deinen Druck brauchst du mindestens XX Windungen.",
 		"KeyboardButtons": [
 		[ "Abbruch"],
 		[ "Falsches Material geladen oder zu wenig Material auf der Spule" ],
