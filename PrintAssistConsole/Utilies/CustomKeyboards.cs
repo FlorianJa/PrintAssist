@@ -69,9 +69,9 @@ namespace PrintAssistConsole
                 {
                     new []
                     {
-                        InlineKeyboardButton.WithCallbackData("<", "<"),
+                        InlineKeyboardButton.WithCallbackData("<-", "<"),
                         InlineKeyboardButton.WithCallbackData("Auswählen", "select"),
-                        InlineKeyboardButton.WithCallbackData(">", ">")
+                        InlineKeyboardButton.WithCallbackData("->", ">")
                     }
                 });
             }
@@ -86,7 +86,7 @@ namespace PrintAssistConsole
                     new []
                     {
                         InlineKeyboardButton.WithCallbackData("Auswählen", "select"),
-                        InlineKeyboardButton.WithCallbackData(">", ">")
+                        InlineKeyboardButton.WithCallbackData("->", ">")
                     }
                 });
             }
@@ -100,7 +100,7 @@ namespace PrintAssistConsole
                 {
                     new []
                     {
-                        InlineKeyboardButton.WithCallbackData("<", "<"),
+                        InlineKeyboardButton.WithCallbackData("<-", "<"),
                         InlineKeyboardButton.WithCallbackData("Auswählen", "select")
                     }
                 });
