@@ -206,6 +206,13 @@ namespace PrintAssistConsole
                                 stlFile = new String(((StartPrint)intent).response.QueryResult.Parameters.Fields["object"].StringValue);
                             }
                         }
+                        else if(intent is SearchModel)
+                        {
+                            if (((SearchModel)intent).response.QueryResult.Parameters.Fields.ContainsKey("object"))
+                            {
+                                stlFile = new String(((SearchModel)intent).response.QueryResult.Parameters.Fields["object"].StringValue);
+                            }
+                        }
 
                         await machine.FireAsync(Trigger.InputEntered);
                         break;

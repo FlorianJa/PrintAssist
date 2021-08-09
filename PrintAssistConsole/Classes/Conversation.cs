@@ -15,6 +15,7 @@ using System.Threading.Tasks;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
+using Telegram.Bot.Types.InputFiles;
 using Telegram.Bot.Types.ReplyMarkups;
 
 namespace PrintAssistConsole
@@ -424,6 +425,97 @@ namespace PrintAssistConsole
                             replyMarkup: replyKeyboardMarkup);
         }
 
+        protected async Task SendMessageAsync(Int64 id, Message message)
+        {
+            #region send photo(s)
+            if (message.PhotoFilePaths != null)
+            {
+                if (message.PhotoFilePaths.Count == 1)
+                {
+                    if (System.IO.File.Exists(message.PhotoFilePaths[0]))
+                    {
+                        await bot.SendChatActionAsync(id, ChatAction.UploadPhoto);
+                        using FileStream fileStream = new(message.PhotoFilePaths[0], FileMode.Open, FileAccess.Read, FileShare.Read);
+                        var fileName = message.PhotoFilePaths[0].Split(Path.DirectorySeparatorChar).Last();
+                        await bot.SendPhotoAsync(chatId: id, photo: new InputOnlineFile(fileStream, fileName));
+                    }
+                }
+                else if (message.PhotoFilePaths.Count > 1)
+                {
+                    await bot.SendChatActionAsync(id, ChatAction.UploadPhoto);
+
+                    var album = new List<IAlbumInputMedia>();
+                    var tmp = new List<FileStream>();
+                    foreach (var path in message.PhotoFilePaths)
+                    {
+                        if (System.IO.File.Exists(path))
+                        {
+
+                            FileStream fileStream = new(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+                            tmp.Add(fileStream);
+                            var fileName = path.Split(Path.DirectorySeparatorChar).Last();
+
+                            album.Add(new InputMediaPhoto(new InputMedia(fileStream, fileName)));
+                        }
+                    }
+
+                    await bot.SendMediaGroupAsync(chatId: id, inputMedia: album);
+
+                    foreach (var stream in tmp)
+                    {
+                        stream.Dispose();
+                    }
+                    tmp.Clear();
+                }
+            }
+            #endregion
+
+            #region send video(s)
+            if (message.VideoFilePaths != null)
+            {
+                if (message.VideoFilePaths.Count == 1)
+                {
+
+                    if (System.IO.File.Exists(message.VideoFilePaths[0]))
+                    {
+                        await bot.SendChatActionAsync(id, ChatAction.UploadVideo);
+                        using FileStream fileStream = new(message.VideoFilePaths[0], FileMode.Open, FileAccess.Read, FileShare.Read);
+                        var fileName = message.VideoFilePaths[0].Split(Path.DirectorySeparatorChar).Last();
+                        await bot.SendVideoAsync(chatId: id, video: new InputOnlineFile(fileStream, fileName));
+                    }
+                }
+                else if (message.VideoFilePaths.Count > 1)
+                {
+                    await bot.SendChatActionAsync(id, ChatAction.UploadVideo);
+
+                    var album = new List<IAlbumInputMedia>();
+                    foreach (var path in message.VideoFilePaths)
+                    {
+                        if (System.IO.File.Exists(path))
+                        {
+                            using FileStream fileStream = new(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+                            var fileName = path.Split(Path.DirectorySeparatorChar).Last();
+
+                            album.Add(new InputMediaPhoto(new InputMedia(fileStream, fileName)));
+                        }
+                    }
+
+                    await bot.SendMediaGroupAsync(chatId: id, inputMedia: album);
+                }
+            }
+            #endregion
+
+            #region send text
+            if (message.Text != null)
+            {
+                await bot.SendChatActionAsync(id, ChatAction.Typing);
+                await bot.SendTextMessageAsync(chatId: id,
+                            text: message.Text,
+                            replyMarkup: message.ReplyKeyboardMarkup);
+            }
+            #endregion
+        }
+
         public async Task HandleUserInputAsync(Update update)
         {
            
@@ -452,7 +544,41 @@ namespace PrintAssistConsole
                         }
                     case ConversationState.Idle:
                         {
-                            if (update.Message.Document != null)
+                            if (update.Type == UpdateType.CallbackQuery)
+                            {
+                                await bot.AnswerCallbackQueryAsync(update.CallbackQuery.Id);
+                                InlineKeyboardMarkup keyboard = null;
+
+                                switch (update.CallbackQuery.Data)
+                                {
+                                    case "printer":
+                                        {
+                                            await machine.FireAsync(Trigger.StartHardwareTutorial);
+                                            break;
+                                        }
+                                    case "workflow":
+                                        {
+                                            await machine.FireAsync(Trigger.StartWorkflowTutorial);
+                                            break;
+                                        }
+                                    case "search":
+                                        {
+                                            await machine.FireAsync(Trigger.SearchModel);
+                                            break;
+                                        }
+                                    case "start":
+                                        {
+                                            await machine.FireAsync(Trigger.StartPrint);
+                                            break;
+                                        }
+                                    default:
+                                        break;
+                                }
+
+                                await bot.EditMessageReplyMarkupAsync(update.CallbackQuery.From.Id, update.CallbackQuery.Message.MessageId);
+
+                            }
+                            else if (update.Message.Document != null)
                             {
 
                                 var path = update.Message.Document.FileName;
@@ -530,7 +656,13 @@ namespace PrintAssistConsole
                                         }
                                     case SkillInformation skillIntent:
                                         {
-                                            await SendMessageAsync(skillIntent.Process());
+
+                                            
+                                            await bot.SendTextMessageAsync(chatId: Id,
+                                                                            text: skillIntent.Process(),
+                                                                            replyMarkup: CustomKeyboards.SkillInformationInlineKeyboard);
+
+                                            //await SendMessageAsync(skillIntent.Process());
                                             break;
                                         }
                                     case SearchModel:

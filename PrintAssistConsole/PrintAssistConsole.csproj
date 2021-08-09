@@ -57,6 +57,9 @@
     <None Update="BotContent\images\0.3mmLayer.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="BotContent\images\bridging.jpg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="BotContent\images\Buildplate.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -80,6 +83,9 @@
     </None>
     <None Update="BotContent\images\Overhangs.jpg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="BotContent\images\overhangs_1.jpg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="BotContent\images\Placeholder.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>

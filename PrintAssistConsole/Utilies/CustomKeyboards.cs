@@ -69,9 +69,9 @@ namespace PrintAssistConsole
                 {
                     new []
                     {
-                        InlineKeyboardButton.WithCallbackData("<-", "<"),
+                        InlineKeyboardButton.WithCallbackData("🡸", "<"),
                         InlineKeyboardButton.WithCallbackData("Auswählen", "select"),
-                        InlineKeyboardButton.WithCallbackData("->", ">")
+                        InlineKeyboardButton.WithCallbackData("🡺", ">")
                     }
                 });
             }
@@ -86,7 +86,7 @@ namespace PrintAssistConsole
                     new []
                     {
                         InlineKeyboardButton.WithCallbackData("Auswählen", "select"),
-                        InlineKeyboardButton.WithCallbackData("->", ">")
+                        InlineKeyboardButton.WithCallbackData("🡺", ">")
                     }
                 });
             }
@@ -100,8 +100,47 @@ namespace PrintAssistConsole
                 {
                     new []
                     {
-                        InlineKeyboardButton.WithCallbackData("<-", "<"),
+                        InlineKeyboardButton.WithCallbackData("🡸", "<"),
                         InlineKeyboardButton.WithCallbackData("Auswählen", "select")
+                    }
+                });
+            }
+        }
+        public static InlineKeyboardMarkup DontShowAgain
+        {
+            get
+            {
+                return new InlineKeyboardMarkup(new[]
+                {
+                    new []
+                    {
+                        InlineKeyboardButton.WithCallbackData("Hinweis in Zukunft nicht mehr anzeigen.", "DontShowAgain")
+                    }
+                });
+            }
+        }
+
+        public static InlineKeyboardMarkup SkillInformationInlineKeyboard
+        {
+            get
+            {
+                return new InlineKeyboardMarkup(new[]
+                {
+                    new []
+                    {
+                        InlineKeyboardButton.WithCallbackData("Drucker erklären", "printer"),
+                    },
+                    new []
+                    {
+                    InlineKeyboardButton.WithCallbackData("Workflow erklären", "workflow")
+                    },
+                    new []
+                    {
+                        InlineKeyboardButton.WithCallbackData("Modell suchen", "search")
+                    },
+                    new []
+                    {
+                        InlineKeyboardButton.WithCallbackData("Druck starten", "start")
                     }
                 });
             }

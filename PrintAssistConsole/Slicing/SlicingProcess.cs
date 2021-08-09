@@ -101,6 +101,11 @@ namespace PrintAssistConsole
             "0.25mm DRAFT"
         };
         private string selectedProfileFile = null;
+        private bool ShowTestPrintTip = true;
+        private bool ShowSurfaceTip = true;
+        private bool ShowMechanicalForceTip = true;
+        private bool ShowOverhangTip = true;
+        private bool ShowFineDetailTip = true;
 
         public event EventHandler SlicingProcessCompletedWithoutStartPrint;
         public event EventHandler<string> SlicingProcessCompletedWithStartPrint;
@@ -139,7 +144,7 @@ namespace PrintAssistConsole
                 .PermitReentry(Trigger.Reentry);
 
             machine.Configure(SlicingProcessState.SelectingPreset)
-                .OnEntryAsync(async () => await SendMessageAsync(machine.State))
+                .OnEntryAsync(async () => { await SendMessageAsync(machine.State);})
                 .InternalTransitionAsync(Trigger.SelectingPresets, async () => { await SendMessageAsync(machine.State); })
                 .Permit(Trigger.PresetSelcted, SlicingProcessState.AdvancedSupport)
                 ;
@@ -195,29 +200,29 @@ namespace PrintAssistConsole
                .Permit(Trigger.Yes, SlicingProcessState.PrintAfterSclicing);
 
             machine.Configure(SlicingProcessState.GuidedModePrototype)
-                .OnEntryAsync(async () => await SendMessageAsync(machine.State))
+                .OnEntryAsync(async () => { await SendMessageAsync(machine.State); if (ShowTestPrintTip) await SendTipForTestPrintAsync(); }) 
                 .Permit(Trigger.No, SlicingProcessState.GuidedModeSurfaceSelection)
                 .Permit(Trigger.Yes, SlicingProcessState.GuidedModeOverhangs)
                 .PermitReentry(Trigger.Reentry);
 
             machine.Configure(SlicingProcessState.GuidedModeSurfaceSelection)
-                .OnEntryAsync(async () => await SendMessageAsync(machine.State))
+                .OnEntryAsync(async () => { await SendMessageAsync(machine.State); if (ShowSurfaceTip) await SendTipForSurfaceAsync(); })
                 .Permit(Trigger.Next, SlicingProcessState.GuidedModeMechanicalForce)
                 .PermitReentry(Trigger.Reentry);
 
             machine.Configure(SlicingProcessState.GuidedModeMechanicalForce)
-                .OnEntryAsync(async () => await SendMessageAsync(machine.State))
+                .OnEntryAsync(async () => { await SendMessageAsync(machine.State); if (ShowMechanicalForceTip) await SendTipForMechanicalForceAsync(); })
                 .Permit(Trigger.Next, SlicingProcessState.GuidedModeOverhangs)
                 .PermitReentry(Trigger.Reentry);
 
             machine.Configure(SlicingProcessState.GuidedModeOverhangs)
-                .OnEntryAsync(async () => await SendMessageAsync(machine.State))
+                .OnEntryAsync(async () => {await SendMessageAsync(machine.State); if (ShowOverhangTip) await SendTipForOverhangAsync(); })
                 .PermitIf(Trigger.Next, SlicingProcessState.GuidedModeDetails, () => { return isPrototype == false; })
                 .PermitIf(Trigger.Next, SlicingProcessState.guidedModeSummary, () => { return isPrototype == true; })
                 .PermitReentry(Trigger.Reentry);
 
             machine.Configure(SlicingProcessState.GuidedModeDetails)
-               .OnEntryAsync(async () => await SendMessageAsync(machine.State))
+               .OnEntryAsync(async () => {await SendMessageAsync(machine.State); if (ShowFineDetailTip) await SendTipForFineDetailsAsync(); })
                .Permit(Trigger.Next, SlicingProcessState.guidedModeSummary)
                .PermitReentry(Trigger.Reentry);
 
@@ -226,6 +231,36 @@ namespace PrintAssistConsole
                 .Permit(Trigger.Next, SlicingProcessState.SlicingServiceStarted);
 
             #endregion
+        }
+
+        private async Task SendTipForFineDetailsAsync()
+        {
+            //await SendMessageAsync("Hinweis: ", CustomKeyboards.DontShowAgain);
+        }
+
+        private async Task SendTipForOverhangAsync()
+        {
+            var message = new Message();
+            message.Text = "Hinweis: Überhänge sind Stellen, an denen das aufzutragende Material ganz oder teilweise in der Luft schwebt, so wie in den Abbildungen oben.";
+            message.PhotoFilePaths = new List<string>() { ".\\BotContent\\images\\overhangs_1.jpg" , ".\\BotContent\\images\\bridging.jpg" };
+
+            await SendMessageAsync(message, CustomKeyboards.DontShowAgain);
+            //await SendMessageAsync("Hinweis: Überhänge sind Stellen, an denen das aufzutragende Material ganz oder teilweise in der Luft schwebt, so wie in den Abbildungen oben.", CustomKeyboards.DontShowAgain);
+        }
+
+        private async Task SendTipForMechanicalForceAsync()
+        {
+            await SendMessageAsync("Hinweis: Deko-Objekte müssen keiner mechanischen Belastung standhalten im Gegensatz zu Werkzeugen oder anderen Objekten.", CustomKeyboards.DontShowAgain);
+        }
+
+        private async Task SendTipForSurfaceAsync()
+        {
+            await SendMessageAsync("Hinweis: Für eine glatte Oberfläche muss die Schichthöhe verringert werden. Dadurch erhöht sich aber die Druckdauer.", CustomKeyboards.DontShowAgain);
+        }
+
+        private async Task SendTipForTestPrintAsync()
+        {
+            await SendMessageAsync("Hinweis: Bei einem Testdruck verringere ich die Druckqualität, damit der Druck schneller fertig ist.", CustomKeyboards.DontShowAgain);
         }
 
         private void CalculateSlicingParameters()
@@ -291,8 +326,8 @@ namespace PrintAssistConsole
             }
             else
             {
-                message += $"{resourceManager.GetString("LayerHeight", currentCulture)} = {cliCommands.LayerHeight}" + Environment.NewLine;
-                message += $"{resourceManager.GetString("InfillPercentage", currentCulture)} = {cliCommands.FillDensity}" + Environment.NewLine;
+                message += $"{resourceManager.GetString("LayerHeight", currentCulture)} = {cliCommands.LayerHeight}mm" + Environment.NewLine;
+                message += $"{resourceManager.GetString("InfillPercentage", currentCulture)} = {cliCommands.FillDensity}%" + Environment.NewLine;
                 message += $"{resourceManager.GetString("SupportIs", currentCulture)} ";
                 message += (bool)cliCommands.SupportMaterial ? $"{resourceManager.GetString("activated", currentCulture)}." : $"{resourceManager.GetString("deactivated", currentCulture)}.";
             }
@@ -373,7 +408,7 @@ namespace PrintAssistConsole
             await SendMessageAsync(message);
         }
 
-        private async Task SendMessageAsync(Message message)
+        private async Task SendMessageAsync(Message message, InlineKeyboardMarkup inlineKeyboard = null)
         {
             #region send photo(s)
             if (message.PhotoFilePaths != null)
@@ -459,7 +494,7 @@ namespace PrintAssistConsole
                 await bot.SendChatActionAsync(id, ChatAction.Typing);
                 await bot.SendTextMessageAsync(chatId: id,
                             text: message.Text,
-                            replyMarkup: message.ReplyKeyboardMarkup);
+                            replyMarkup: inlineKeyboard ?? message.ReplyKeyboardMarkup);
             }
             #endregion
         }
@@ -625,30 +660,41 @@ namespace PrintAssistConsole
                     }
                 case SlicingProcessState.GuidedModePrototype:
                     {
-                        var intent = await IntentDetector.Instance.CallDFAPIAsync(id, update.Message.Text, "TutorialStarten-followup"); //reuse the Yes No intents from the tutorial
-                        switch (intent)
+                        if (update.Type == UpdateType.CallbackQuery)
                         {
-                            case TutorialYes:
-                                {
-                                    isPrototype = true;
-                                    await machine.FireAsync(Trigger.Yes);
-                                    break;
-                                }
-                            case TutorialNo:
-                                {
-                                    isPrototype = false;
-                                    await machine.FireAsync(Trigger.No);
-                                    break;
-                                }
-                            case DefaultFallbackIntent fallbackIntent:
-                                {
-                                    await SendMessageAsync(fallbackIntent.Process());
-                                    await machine.FireAsync(Trigger.Reentry);
+                            if (update.CallbackQuery.Data == "DontShowAgain")
+                            {
+                                await bot.EditMessageReplyMarkupAsync(update.CallbackQuery.From.Id, update.CallbackQuery.Message.MessageId);
+                                ShowTestPrintTip = false;
+                            }
+                        }
+                        else
+                        {
+                            var intent = await IntentDetector.Instance.CallDFAPIAsync(id, update.Message.Text, "TutorialStarten-followup"); //reuse the Yes No intents from the tutorial
+                            switch (intent)
+                            {
+                                case TutorialYes:
+                                    {
+                                        isPrototype = true;
+                                        await machine.FireAsync(Trigger.Yes);
+                                        break;
+                                    }
+                                case TutorialNo:
+                                    {
+                                        isPrototype = false;
+                                        await machine.FireAsync(Trigger.No);
+                                        break;
+                                    }
+                                case DefaultFallbackIntent fallbackIntent:
+                                    {
+                                        await SendMessageAsync(fallbackIntent.Process());
+                                        await machine.FireAsync(Trigger.Reentry);
+                                        return;
+                                    }
+                                default:
+                                    await machine.FireAsync(Trigger.SelectingGuidedMode);
                                     return;
-                                }
-                            default:
-                                await machine.FireAsync(Trigger.SelectingGuidedMode);
-                                return;
+                            }
                         }
                         break;
                     }
@@ -720,124 +766,168 @@ namespace PrintAssistConsole
                     break;
                 case SlicingProcessState.GuidedModeSurfaceSelection:
                     {
-                        var intent = await IntentDetector.Instance.CallDFAPIAsync(id, update.Message.Text, "TutorialStarten-followup"); //reuse the Yes No intents from the tutorial
-                        switch (intent)
+                        if (update.Type == UpdateType.CallbackQuery)
                         {
-                            case TutorialYes:
-                                {
-                                    smoothSurfaceNeeded = true;
-                                    await SendMessageAsync(resourceManager.GetString("GuidedSurfaceSmooth", currentCulture));
-                                    break;
-                                }
-                            case TutorialNo:
-                                {
-                                    smoothSurfaceNeeded = false;
-                                    await SendMessageAsync(resourceManager.GetString("GuidedSurfaceNormal", currentCulture));
-                                    break;
-                                }
-                            case DefaultFallbackIntent fallbackIntent:
-                                {
-                                    await SendMessageAsync(fallbackIntent.Process());
+                            if (update.CallbackQuery.Data == "DontShowAgain")
+                            {
+                                await bot.EditMessageReplyMarkupAsync(update.CallbackQuery.From.Id, update.CallbackQuery.Message.MessageId);
+                                ShowSurfaceTip = false;
+                            }
+                        }
+                        else
+                        {
+                            var intent = await IntentDetector.Instance.CallDFAPIAsync(id, update.Message.Text, "TutorialStarten-followup"); //reuse the Yes No intents from the tutorial
+                            switch (intent)
+                            {
+                                case TutorialYes:
+                                    {
+                                        smoothSurfaceNeeded = true;
+                                        await SendMessageAsync(resourceManager.GetString("GuidedSurfaceSmooth", currentCulture));
+                                        break;
+                                    }
+                                case TutorialNo:
+                                    {
+                                        smoothSurfaceNeeded = false;
+                                        await SendMessageAsync(resourceManager.GetString("GuidedSurfaceNormal", currentCulture));
+                                        break;
+                                    }
+                                case DefaultFallbackIntent fallbackIntent:
+                                    {
+                                        await SendMessageAsync(fallbackIntent.Process());
+                                        await machine.FireAsync(Trigger.Reentry);
+                                        return;
+                                    }
+
+                                default:
                                     await machine.FireAsync(Trigger.Reentry);
                                     return;
-                                }
-
-                            default:
-                                await machine.FireAsync(Trigger.Reentry);
-                                return;
+                            }
+                            await machine.FireAsync(Trigger.Next);
                         }
-                        await machine.FireAsync(Trigger.Next);
-
                         break;
                     }
                 case SlicingProcessState.GuidedModeMechanicalForce:
                     {
-                        var intent = await IntentDetector.Instance.CallDFAPIAsync(id, update.Message.Text, "TutorialStarten-followup"); //reuse the Yes No intents from the tutorial
-                        switch (intent)
+                        if (update.Type == UpdateType.CallbackQuery)
                         {
-                            case TutorialYes:
-                                {
-                                    objectNeedsToHandleMechanicalForces = true;
-                                    await SendMessageAsync(resourceManager.GetString("GuidedMoreInfill", currentCulture));
-                                    break;
-                                }
-                            case TutorialNo:
-                                {
-                                    objectNeedsToHandleMechanicalForces = false;
-                                    await SendMessageAsync(resourceManager.GetString("GuidedNormalInfill", currentCulture));
-                                    break;
-                                }
-                            case DefaultFallbackIntent fallbackIntent:
-                                {
-                                    await SendMessageAsync(fallbackIntent.Process());
+                            if (update.CallbackQuery.Data == "DontShowAgain")
+                            {
+                                await bot.EditMessageReplyMarkupAsync(update.CallbackQuery.From.Id, update.CallbackQuery.Message.MessageId);
+                                ShowMechanicalForceTip = false;
+                            }
+                        }
+                        else
+                        {
+                            var intent = await IntentDetector.Instance.CallDFAPIAsync(id, update.Message.Text, "TutorialStarten-followup"); //reuse the Yes No intents from the tutorial
+                            switch (intent)
+                            {
+                                case TutorialYes:
+                                    {
+                                        objectNeedsToHandleMechanicalForces = true;
+                                        await SendMessageAsync(resourceManager.GetString("GuidedMoreInfill", currentCulture));
+                                        break;
+                                    }
+                                case TutorialNo:
+                                    {
+                                        objectNeedsToHandleMechanicalForces = false;
+                                        await SendMessageAsync(resourceManager.GetString("GuidedNormalInfill", currentCulture));
+                                        break;
+                                    }
+                                case DefaultFallbackIntent fallbackIntent:
+                                    {
+                                        await SendMessageAsync(fallbackIntent.Process());
+                                        await machine.FireAsync(Trigger.Reentry);
+                                        return;
+                                    }
+                                default:
                                     await machine.FireAsync(Trigger.Reentry);
                                     return;
-                                }
-                            default:
-                                await machine.FireAsync(Trigger.Reentry);
-                                return;
+                            }
+                            await machine.FireAsync(Trigger.Next);
                         }
-                        await machine.FireAsync(Trigger.Next);
                         break;
+
                     }
                 case SlicingProcessState.GuidedModeOverhangs:
                     {
-                        var intent = await IntentDetector.Instance.CallDFAPIAsync(id, update.Message.Text, "TutorialStarten-followup"); //reuse the Yes No intents from the tutorial
-                        switch (intent)
+                        if (update.Type == UpdateType.CallbackQuery)
                         {
-                            case TutorialYes:
-                                {
-                                    objectHasOverhangs = true;
-                                    await SendMessageAsync(resourceManager.GetString("GuidedSupportOn", currentCulture));
-                                    break;
-                                }
-                            case TutorialNo:
-                                {
-                                    objectHasOverhangs = false;
-                                    await SendMessageAsync(resourceManager.GetString("GuidedSupportOff", currentCulture));
-                                    break;
-                                }
-                            case DefaultFallbackIntent fallbackIntent:
-                                {
-                                    await SendMessageAsync(fallbackIntent.Process());
+                            if (update.CallbackQuery.Data == "DontShowAgain")
+                            {
+                                await bot.EditMessageReplyMarkupAsync(update.CallbackQuery.From.Id, update.CallbackQuery.Message.MessageId);
+                                ShowOverhangTip = false;
+                            }
+                        }
+                        else
+                        {
+                            var intent = await IntentDetector.Instance.CallDFAPIAsync(id, update.Message.Text, "TutorialStarten-followup"); //reuse the Yes No intents from the tutorial
+                            switch (intent)
+                            {
+                                case TutorialYes:
+                                    {
+                                        objectHasOverhangs = true;
+                                        await SendMessageAsync(resourceManager.GetString("GuidedSupportOn", currentCulture));
+                                        break;
+                                    }
+                                case TutorialNo:
+                                    {
+                                        objectHasOverhangs = false;
+                                        await SendMessageAsync(resourceManager.GetString("GuidedSupportOff", currentCulture));
+                                        break;
+                                    }
+                                case DefaultFallbackIntent fallbackIntent:
+                                    {
+                                        await SendMessageAsync(fallbackIntent.Process());
+                                        await machine.FireAsync(Trigger.Reentry);
+                                        return;
+                                    }
+                                default:
                                     await machine.FireAsync(Trigger.Reentry);
                                     return;
-                                }
-                            default:
-                                await machine.FireAsync(Trigger.Reentry);
-                                return;
+                            }
+                            await machine.FireAsync(Trigger.Next);
                         }
-                        await machine.FireAsync(Trigger.Next);
                         break;
                     }
                 case SlicingProcessState.GuidedModeDetails:
                     {
-                        var intent = await IntentDetector.Instance.CallDFAPIAsync(id, update.Message.Text, "TutorialStarten-followup"); //reuse the Yes No intents from the tutorial
-                        switch (intent)
+                        if (update.Type == UpdateType.CallbackQuery)
                         {
-                            case TutorialYes:
-                                {
-                                    objectHasFineDetails = true;
-                                    await SendMessageAsync(resourceManager.GetString("GuidedFineDetails", currentCulture));
-                                    break;
-                                }
-                            case TutorialNo:
-                                {
-                                    objectHasFineDetails = false;
-                                    await SendMessageAsync(resourceManager.GetString("GuidedNoFineDetails", currentCulture));
-                                    break;
-                                }
-                            case DefaultFallbackIntent fallbackIntent:
-                                {
-                                    await SendMessageAsync(fallbackIntent.Process());
+                            if (update.CallbackQuery.Data == "DontShowAgain")
+                            {
+                                await bot.EditMessageReplyMarkupAsync(update.CallbackQuery.From.Id, update.CallbackQuery.Message.MessageId);
+                                ShowFineDetailTip = false;
+                            }
+                        }
+                        else
+                        {
+                            var intent = await IntentDetector.Instance.CallDFAPIAsync(id, update.Message.Text, "TutorialStarten-followup"); //reuse the Yes No intents from the tutorial
+                            switch (intent)
+                            {
+                                case TutorialYes:
+                                    {
+                                        objectHasFineDetails = true;
+                                        await SendMessageAsync(resourceManager.GetString("GuidedFineDetails", currentCulture));
+                                        break;
+                                    }
+                                case TutorialNo:
+                                    {
+                                        objectHasFineDetails = false;
+                                        await SendMessageAsync(resourceManager.GetString("GuidedNoFineDetails", currentCulture));
+                                        break;
+                                    }
+                                case DefaultFallbackIntent fallbackIntent:
+                                    {
+                                        await SendMessageAsync(fallbackIntent.Process());
+                                        await machine.FireAsync(Trigger.Reentry);
+                                        return;
+                                    }
+                                default:
                                     await machine.FireAsync(Trigger.Reentry);
                                     return;
-                                }
-                            default:
-                                await machine.FireAsync(Trigger.Reentry);
-                                return;
+                            }
+                            await machine.FireAsync(Trigger.Next);
                         }
-                        await machine.FireAsync(Trigger.Next);
                         break;
                     }
                 case SlicingProcessState.guidedModeSummary:
