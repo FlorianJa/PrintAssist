@@ -7,12 +7,39 @@ using System.Threading.Tasks;
 
 namespace PrintAssistConsole.Intents
 {
+    [IntentAttribute("Material")]
+    public class Material : BaseIntent
+    {
+        public override string Process()
+        {
+            return "Der Drucker druckt mit relativ einfachem Kunststoff, welcher sich auf der Spule befindet. Das Material wird auch Filament genannt.";
+        }
+    }
+
+    [IntentAttribute("BuildVolume")]
+    public class BuildVolume : BaseIntent
+    {
+        public override string Process()
+        {
+            return "Der Drucker hat ein Druckvolumen von 18cm x 18cm x 18cm. Wenn du mehr zu dem Drucker erfahren willst, schreib einfach \"Hardware Tutorial starten\".";
+        }
+    }
+
+    [IntentAttribute("PrinterModel")]
+    public class PrinterModel : BaseIntent
+    {
+        public override string Process()
+        {
+            return "Das ist der Prusa Mini. Wenn du mehr zu dem Drucker erfahren willst, schreib einfach \"Hardware Tutorial starten\".";
+        }
+    }
+
     [IntentAttribute("Filament.Costs")]
     public class FilamentCosts : BaseIntent
     {
         public override string Process()
         {
-            throw new NotImplementedException();
+            return "Das Filament kostet ungefähr 20€ pro Spule. Je nach Hersteller, Material oder Größe der Spule kann der Preis aber variieren.";
         }
     }
 
@@ -66,7 +93,7 @@ namespace PrintAssistConsole.Intents
     {
         public override string Process()
         {
-            throw new NotImplementedException();
+            return "Im Workflow Tutorial findest du zu diesem Thema mehr Informationen. Schreib einfach \"Workflow Tutorial starten\" umd mehr zu erfahren.";
         }
     }
 
@@ -75,7 +102,7 @@ namespace PrintAssistConsole.Intents
     {
         public override string Process()
         {
-            throw new NotImplementedException();
+            return "Das Material wird ab ungefähr 170°C zähflüssig. Im Hardwre Tutorial findest du zu diesem Thema mehr Informationen. Schreib einfach \"Hardware Tutorial starten\" umd mehr zu erfahren.";
         }
     }
 
@@ -93,7 +120,7 @@ namespace PrintAssistConsole.Intents
     {
         public override string Process()
         {
-            throw new NotImplementedException();
+            return "Filament kannst du bei den meisten Online-Händlern bestellen. In Zukunft kann ich auch Material für dich bestellen.";
         }
     }
 
@@ -112,7 +139,7 @@ namespace PrintAssistConsole.Intents
     {
         public override string Process()
         {
-            throw new NotImplementedException();
+            return "Der Drucker kostet 419€.";
         }
     }
 
@@ -121,7 +148,7 @@ namespace PrintAssistConsole.Intents
     {
         public override string Process()
         {
-            throw new NotImplementedException();
+            return "Auf der Spule befindet sich das Material mit dem der Drucker druckt. Es wird auch Filament genannt"; 
         }
     }
 
