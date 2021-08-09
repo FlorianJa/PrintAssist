@@ -202,7 +202,7 @@
     <value>Schichthöhe</value>
   </data>
   <data name="NewSearchTerm" xml:space="preserve">
-    <value>Bitte gib einen neuen Suchbegriff ein</value>
+    <value>Nach was für ein Modell suchst du?</value>
   </data>
   <data name="Next" xml:space="preserve">
     <value>Weiter</value>
