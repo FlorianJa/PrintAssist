@@ -8,7 +8,7 @@
 	},
 
 	1: {
-		"text": "Is the buidlplate empty and clean?",
+		"text": "Is the buildplate empty and clean?",
 		"KeyboardButtons": [
 			[ "Druckstart abbrechen", "Hilfe" ],
 			[ "Ja, Buildplate ist leer und sauber" ]
