@@ -585,7 +585,7 @@ namespace PrintAssistConsole
                                     }
                                 default:
                                     {
-                                        await SendMessageAsync("Das kann ich leider an dieser Stelle noch nicht.");
+                                        await SendMessageAsync("Zwischenfragen kann ich leider noch nicht beantworten.");
                                         break;
                                     }
                             }
@@ -639,7 +639,7 @@ namespace PrintAssistConsole
                                     }
                                 default:
                                     {
-                                        await SendMessageAsync("Das kann ich leider an dieser Stelle noch nicht.");
+                                        await SendMessageAsync("Zwischenfragen kann ich leider noch nicht beantworten.");
                                         break;
                                     }
                             }
