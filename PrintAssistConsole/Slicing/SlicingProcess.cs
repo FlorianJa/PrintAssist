@@ -235,7 +235,7 @@ namespace PrintAssistConsole
 
         private async Task SendTipForFineDetailsAsync()
         {
-            //await SendMessageAsync("Hinweis: ", CustomKeyboards.DontShowAgain);
+            await SendMessageAsync("Hinweis: Feine Details sind beispielsweise Ein- oder Auswolbungen auf der Oberfläche oder Gewinde bei Schrauben.", CustomKeyboards.DontShowAgain);
         }
 
         private async Task SendTipForOverhangAsync()
