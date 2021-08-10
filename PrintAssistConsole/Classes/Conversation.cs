@@ -665,9 +665,17 @@ namespace PrintAssistConsole
                                             //await SendMessageAsync(skillIntent.Process());
                                             break;
                                         }
-                                    case SearchModel:
+                                    case SearchModel searchModelIntent:
                                         {
-                                            printObject = null;
+                                            if (searchModelIntent.response.QueryResult.Parameters.Fields.ContainsKey("object"))
+                                            {
+                                                printObject = searchModelIntent.response.QueryResult.Parameters.Fields["object"].StringValue;
+                                            }
+                                            else
+                                            {
+                                                printObject = null;
+                                            }
+
                                             await machine.FireAsync(Trigger.SearchModel);
                                             break;
                                         }
