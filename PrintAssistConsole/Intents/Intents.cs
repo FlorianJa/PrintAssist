@@ -13,7 +13,7 @@ namespace PrintAssistConsole.Intents
     {
         public override string Process()
         {
-            return "3D Druck ist ein Fertigunsverfahren, mit dem fast jede Modell herstellen kann.";
+            return "3D Druck ist ein Fertigunsverfahren, mit dem fast jedes Modell herstellen kann.";
         }
     }
     [IntentAttribute("Material")]
