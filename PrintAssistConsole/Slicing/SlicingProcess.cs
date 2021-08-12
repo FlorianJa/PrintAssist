@@ -320,14 +320,14 @@ namespace PrintAssistConsole
             if(isPrototype)
             {
                 message += $"{resourceManager.GetString("LayerHeight", currentCulture)} = 0.3mm" + Environment.NewLine;
-                message += $"{resourceManager.GetString("InfillPercentage", currentCulture)} = {cliCommands.FillDensity}" + Environment.NewLine;
+                message += $"{resourceManager.GetString("InfillPercentage", currentCulture)} = {cliCommands.FillDensity*100f}%" + Environment.NewLine;
                 message += $"{resourceManager.GetString("SupportIs", currentCulture)} ";
                 message += objectHasOverhangs ? $"{resourceManager.GetString("activated", currentCulture)}.": $"{resourceManager.GetString("deactivated", currentCulture)}.";
             }
             else
             {
                 message += $"{resourceManager.GetString("LayerHeight", currentCulture)} = {cliCommands.LayerHeight}mm" + Environment.NewLine;
-                message += $"{resourceManager.GetString("InfillPercentage", currentCulture)} = {cliCommands.FillDensity}%" + Environment.NewLine;
+                message += $"{resourceManager.GetString("InfillPercentage", currentCulture)} = {cliCommands.FillDensity*100f}%" + Environment.NewLine;
                 message += $"{resourceManager.GetString("SupportIs", currentCulture)} ";
                 message += (bool)cliCommands.SupportMaterial ? $"{resourceManager.GetString("activated", currentCulture)}." : $"{resourceManager.GetString("deactivated", currentCulture)}.";
             }
@@ -347,6 +347,8 @@ namespace PrintAssistConsole
                     cliCommands = PrusaSlicerCLICommands.Default;
                     cliCommands.SupportMaterial = supportMaterial;
                     cliCommands.LoadConfigFile = selectedProfileFile;
+                    cliCommands.LayerHeight = null;
+                    cliCommands.FillDensity = null;
                 }
                 else
                 {
@@ -377,9 +379,17 @@ namespace PrintAssistConsole
 
         private async void Timer_Elapsed1(object sender, ElapsedEventArgs e)
         {
-            counter++;
-            var newText = resourceManager.GetString("SlicingInProgress", currentCulture) + String.Concat(Enumerable.Repeat(".", (counter % 3) + 1));
-            await bot.EditMessageTextAsync(id, progessMessageId, newText);
+            try
+            {
+                counter++;
+                var newText = resourceManager.GetString("SlicingInProgress", currentCulture) + String.Concat(Enumerable.Repeat(".", (counter % 3) + 1));
+                await bot.EditMessageTextAsync(id, progessMessageId, newText);
+            }
+            catch (Exception)
+            {
+
+            }
+            
         }
         
         private async void SlicingServiceClient_SlicingCompleted(object sender, SlicingCompletedEventArgs args)
