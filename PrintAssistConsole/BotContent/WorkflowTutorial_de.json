@@ -21,19 +21,19 @@
 	},
 	4: {
 		"text": "Die Qualität der Oberfläche wird hauptsächlich durch die Schichthöhe beeinflusst. Je dünner die Schichten sind, desto glatter ist die Oberfläche. Dieser Drucker kann Schichthöhen zwischen 0,05 mm und 0,3 mm drucken. (4/10)",
-		"photoFilePaths": [ ".\\BotContent\\images\\LayerHeights.png", ".\\BotContent\\images\\0.05mmLayer.png", ".\\BotContent\\images\\0.2mmLayer.png", ".\\BotContent\\images\\0.3mmLayer.png" ],
+		"photoFilePaths": [ "BotContent/images/LayerHeights.png", "BotContent/images/0.05mmLayer.png", "BotContent/images/0.2mmLayer.png", "BotContent/images/0.3mmLayer.png" ],
 		"KeyboardButtons": [ [ "Erklärung abbrechen", "Weiter" ] ]
 	},
 	5:
 	{
 		"text": "Um Material zu sparen und die Druckzeit zu verkürzen, werden 3D-gedruckte Objekte meistens nicht massiv gedruckt. Es können verschiedene Füllmuster und Füllgrade ausgewählt werden. Ein hoher Füllgrad erhöht die Stabilität, aber auch die Druckdauer. (5/10)",
-		"photoFilePaths": [ ".\\BotContent\\images\\InfillPattern.png", ".\\BotContent\\images\\InfillPercentage.png" ],
+		"photoFilePaths": [ "BotContentimagesInfillPattern.png", "BotContent/images/InfillPercentage.png" ],
 		"KeyboardButtons": [ [ "Erklärung abbrechen", "Weiter" ] ]
 	},
 	6:
 	{
 		"text": "Da der Drucker nicht in die Luft drucken kann, müssen Objekten mit Überhängen sogenannte Stützstrukturen hinzugefügen werden. Stützstrukturen sind zusätzliches Material, welches nach dem Druck entfernt werden muss. (6/10)",
-		"photoFilePaths": [ ".\\BotContent\\images\\Overhangs.jpg" ],
+		"photoFilePaths": [ "BotContent/images/Overhangs.jpg" ],
 		"KeyboardButtons": [ [ "Erklärung abbrechen", "Weiter" ] ]
 	},
 	7:

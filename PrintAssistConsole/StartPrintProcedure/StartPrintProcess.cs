@@ -465,7 +465,7 @@ namespace PrintAssistConsole
                         }
                     }
 
-                    await bot.SendMediaGroupAsync(chatId: id, inputMedia: album);
+                    await bot.SendMediaGroupAsync(chatId: id, media: album);
 
                     foreach (var stream in tmp)
                     {
@@ -506,7 +506,7 @@ namespace PrintAssistConsole
                         }
                     }
 
-                    await bot.SendMediaGroupAsync(chatId: id, inputMedia: album);
+                    await bot.SendMediaGroupAsync(chatId: id, media: album);
                 }
             }
             #endregion

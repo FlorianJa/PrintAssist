@@ -264,7 +264,7 @@ namespace PrintAssistConsole
                         replyMarkup: keyboard
                         );
         }
-        private async Task SendMessageAsync(string message, ParseMode parseMode = ParseMode.Default)
+        private async Task SendMessageAsync(string message, ParseMode parseMode = ParseMode.Html)
         {
             await bot.SendChatActionAsync(id, ChatAction.Typing);
             await bot.SendTextMessageAsync(chatId: id,
@@ -312,7 +312,7 @@ namespace PrintAssistConsole
                         }
                     }
 
-                    await bot.SendMediaGroupAsync(chatId: id, inputMedia: album);
+                    await bot.SendMediaGroupAsync(chatId: id, media: album);
 
                     foreach (var stream in tmp)
                     {
@@ -353,7 +353,7 @@ namespace PrintAssistConsole
                         }
                     }
 
-                    await bot.SendMediaGroupAsync(chatId: id, inputMedia: album);
+                    await bot.SendMediaGroupAsync(chatId: id, media: album);
                 }
             }
             #endregion

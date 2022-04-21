@@ -127,7 +127,7 @@
     <value>Erklärung abbrechen</value>
   </data>
   <data name="CollectPrintInformationDataPath" xml:space="preserve">
-    <value>.\BotContent\CollectPrintInformationDialog.json</value>
+    <value>BotContent/CollectPrintInformationDialog.json</value>
   </data>
   <data name="CurrentState" xml:space="preserve">
     <value>Aktueller Status:</value>
@@ -172,7 +172,7 @@
     <value>Für eine glatte Oberfläche wähle ich eine geringe Schichthöhe von 0,1 mm.</value>
   </data>
   <data name="HardwareTutorialFilePath" xml:space="preserve">
-    <value>.\BotContent\HardwareTutorial_de.json</value>
+    <value>BotContent/HardwareTutorial_de.json</value>
   </data>
   <data name="Homing" xml:space="preserve">
     <value>Der Drucker fährt nun zu seiner Startposition und führt anschließend seine automatische Kalibrierung aus.</value>
@@ -232,7 +232,7 @@
     <value>Ok, ich suche nach: *{0}*</value>
   </data>
   <data name="SearchModelDialogPath" xml:space="preserve">
-    <value>.\BotContent\SearchModelDialog_de.json</value>
+    <value>BotContent/SearchModelDialog_de.json</value>
   </data>
   <data name="SearchResultSummary" xml:space="preserve">
     <value>Ich habe {0} Ergebnisse gefunden. Benutze die Pfeil-Buttons unter dem Bild um durch die Suchergebnisse zu navigieren. Wenn dir ein Modell gefällt, klicke auf "Auswählen".</value>
@@ -244,7 +244,7 @@
     <value>Möchtest du die Datei jetzt slicen und drucken?</value>
   </data>
   <data name="SlicingDialogDataPath" xml:space="preserve">
-    <value>.\BotContent\SlicingProcess_de.json</value>
+    <value>BotContent/SlicingProcess_de.json</value>
   </data>
   <data name="SlicingFinished" xml:space="preserve">
     <value>Slicing abgeschlossen.</value>
@@ -259,7 +259,7 @@
     <value>Was kann ich für dich tun?</value>
   </data>
   <data name="StartPrintDialogDataPath" xml:space="preserve">
-    <value>.\BotContent\StartPrintingProcess_de.json</value>
+    <value>BotContent/StartPrintingProcess_de.json</value>
   </data>
   <data name="StlRecieved" xml:space="preserve">
     <value>Ich hab dein Modell erhalten. Möchtest du das Modell jetzt slicen?</value>
@@ -280,6 +280,6 @@
     <value>Was möchtest du drucken?</value>
   </data>
   <data name="WorkflowTutorialFilePath" xml:space="preserve">
-    <value>.\BotContent\WorkflowTutorial_de.json</value>
+    <value>BotContent/WorkflowTutorial_de.json</value>
   </data>
 </root>

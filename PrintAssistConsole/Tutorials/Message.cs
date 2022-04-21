@@ -22,7 +22,7 @@ namespace PrintAssistConsole
             {
                 if (KeyboardButtons != null && KeyboardButtons.Count > 0)
                 {
-                    var keyboard = new ReplyKeyboardMarkup();
+                   
                     var keyboardButtons = new List<List<KeyboardButton>>();
 
                     foreach (var row in KeyboardButtons)
@@ -35,7 +35,8 @@ namespace PrintAssistConsole
                         keyboardButtons.Add(rowButtons);
                     }
 
-                    keyboard.Keyboard = keyboardButtons;
+                    var keyboard = new ReplyKeyboardMarkup(keyboardButtons);
+                    //keyboard.Keyboard = keyboardButtons;
                     keyboard.ResizeKeyboard = true;
                     return keyboard;
                 }

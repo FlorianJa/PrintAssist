@@ -74,9 +74,8 @@ namespace PrintAssistConsole
 
             bot = new TelegramBotClient(botToken);
             var me = await bot.GetMeAsync();
-            bot.StartReceiving(new DefaultUpdateHandler(HandleUpdateAsync, HandleErrorAsync), cts.Token);
-
-
+            bot.StartReceiving(HandleUpdateAsync, HandleErrorAsync, receiverOptions:null, cts.Token);
+            
             Console.WriteLine($"Start listening for @{me.Username}");
             Console.WriteLine("Press CTRL+C to exit.");
 

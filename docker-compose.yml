@@ -1,0 +1,12 @@
+version: "2.1"
+services:
+  printassist:
+    image: printassist
+    container_name: printassist
+    restart: unless-stopped
+  slicingservice:
+    image: slicingservice
+    container_name: slicingservice
+    ports:
+      - 5000:8080
+    restart: unless-stopped  

@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "PrintAssistConsole": {
+      "commandName": "Project"
+    },
+    "Docker": {
+      "commandName": "Docker"
+    }
+  }
+}

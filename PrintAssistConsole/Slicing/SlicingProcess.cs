@@ -242,7 +242,7 @@ namespace PrintAssistConsole
         {
             var message = new Message();
             message.Text = "Hinweis: Überhänge sind Stellen, an denen das aufzutragende Material ganz oder teilweise in der Luft schwebt, so wie in den Abbildungen oben.";
-            message.PhotoFilePaths = new List<string>() { ".\\BotContent\\images\\overhangs_1.jpg" , ".\\BotContent\\images\\bridging.jpg" };
+            message.PhotoFilePaths = new List<string>() { "BotContent/images/overhangs_1.jpg" , "BotContent/images/bridging.jpg" };
 
             await SendMessageAsync(message, CustomKeyboards.DontShowAgain);
             //await SendMessageAsync("Hinweis: Überhänge sind Stellen, an denen das aufzutragende Material ganz oder teilweise in der Luft schwebt, so wie in den Abbildungen oben.", CustomKeyboards.DontShowAgain);
@@ -337,7 +337,7 @@ namespace PrintAssistConsole
 
         private async Task CallSlicingService()
         {
-            slicingServiceClient = new SlicingServiceClient("ws://localhost:5003/ws");
+            slicingServiceClient = new SlicingServiceClient("ws://slicingservice:5000/ws");
             slicingServiceClient.SlicingCompleted += SlicingServiceClient_SlicingCompleted;
 
             if (cliCommands == null)
@@ -401,7 +401,7 @@ namespace PrintAssistConsole
             message += Environment.NewLine;
             message += $"{resourceManager.GetString("UsedFilament", currentCulture)} = {args.UsedFilament:F2}m";
 
-            var photos = new List<string>() { ".\\BotContent\\images\\Placeholder.png" };
+            var photos = new List<string>() { "BotContent/images/Placeholder.png" };
             Message tmp = new Message(text: message,photos);
 
             await SendMessageAsync(tmp);
@@ -452,7 +452,7 @@ namespace PrintAssistConsole
                         }
                     }
 
-                    await bot.SendMediaGroupAsync(chatId: id, inputMedia: album);
+                    await bot.SendMediaGroupAsync(chatId: id, media: album);
 
                     foreach (var stream in tmp)
                     {
@@ -493,7 +493,7 @@ namespace PrintAssistConsole
                         }
                     }
 
-                    await bot.SendMediaGroupAsync(chatId: id, inputMedia: album);
+                    await bot.SendMediaGroupAsync(chatId: id, media: album);
                 }
             }
             #endregion

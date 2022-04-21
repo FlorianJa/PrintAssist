@@ -7,37 +7,37 @@
 	1:
 	{
 		"text": "3D Druck ist ein additives Fertigungsverfahren. Das bedeutet, dass ein Objekt durch das Hinzufügen von Material erstellt wird. Beim 3D Druck passiert das Schicht für Schicht, von unten nach oben. (1/6)",
-		"photoFilePaths": [ ".\\BotContent\\images\\PrusaMini.png" ],
+		"photoFilePaths": [ "BotContent/images/PrusaMini.png" ],
 		"KeyboardButtons": [ [ "Erklärung abbrechen", "Weiter" ] ]
 	},
 	2:
 	{
 		"text": "Das Material für diesen Drucker ist ein Kunststoff, der sich als langer Faden auf der Spule befindet. Das Material wird auch Filament genannt. Wenn es erhitzt wird, wird es zähflüssig und der Drucker kann es verarbeiten. Wenn das Material abkühlt, wird es wieder fest, ähnlich wie bei einer Heißklebepistole. (2/6)",
-		"photoFilePaths": [ ".\\BotContent\\images\\Filament.jpg" ],
+		"photoFilePaths": [ "BotContent/images/Filament.jpg" ],
 		"KeyboardButtons": [ [ "Erklärung abbrechen", "Weiter" ] ]
 	},
 	3:
 	{
 		"text": "Das Filament wird im Printhead auf etwa 200°C erhitzt. Das zähflüssige Material wird an der Unterseite des Printheads durch die Düse (Nozzle) herausgedrückt. Die Düse ist während des Drucks sehr heiß und sollte nicht berührt werden! (3/6)",
-		"photoFilePaths": [ ".\\BotContent\\images\\Printhead.jpg", ".\\BotContent\\images\\E3D-Bowden-Connector.png" ],
+		"photoFilePaths": [ "BotContent/images/Printhead.jpg", "BotContent/images/E3D-Bowden-Connector.png" ],
 		"KeyboardButtons": [ [ "Erklärung abbrechen", "Weiter" ] ]
 	},
 	4:
 	{
 		"text": "Zu Beginn wird das Material auf die Buildplate aufgetragen und bildet die erste Schicht des Objekts. Anschließend wird das Material auf die vorherige Schicht aufgetragen. Das Modell wird also Schicht für Schicht erstellt. (4/6)",
-		"photoFilePaths": [ ".\\BotContent\\images\\FirstLayer.jpg" ],
+		"photoFilePaths": [ "BotContent/images/FirstLayer.jpg" ],
 		"KeyboardButtons": [ [ "Erklärung abbrechen", "Weiter" ] ]
 	},
 	5:
 	{
 		"text": "Das Herausdrücken des Filaments aus dem Hotend wird auch als Extrudieren bezeichnet. Durch das Bewegen des Druckkopfes und gleichzeitiges Extrudieren wird das Objekt langsam Schicht für Schicht aufgebaut. Das Video zeigt einen Zeitraffer eines 30-minütigen Drucks. (5/6)",
-		"videoFilePaths": [ ".\\BotContent\\images\\Timelapse.gif" ],
+		"videoFilePaths": [ "BotContent/images/Timelapse.gif" ],
 		"KeyboardButtons": [ [ "Erklärung abbrechen", "Weiter" ] ]
 	},
 	6:
 	{
 		"text": "Für eine bessere Haftung des Drucks auf der Buildplate wird die Buildplate auf etwa 60°C erwärmt werden. Die Buildplate sollte während des Drucks nicht berührt werden, da Verbrennungs- und Quetschgefahr besteht. (6/6)",
-		"photoFilePaths": [ ".\\BotContent\\images\\Buildplate.png" ],
+		"photoFilePaths": [ "BotContent/images/Buildplate.png" ],
 		"KeyboardButtons": [ [ "Erklärung abbrechen", "Weiter" ] ]
 	},
 	7:

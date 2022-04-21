@@ -14,10 +14,12 @@ namespace PrintAssistConsole
             get
             {
                 return new ReplyKeyboardMarkup(
-                            new KeyboardButton[] { "Nein", "Ja" },
-                            resizeKeyboard: true,
-                            oneTimeKeyboard: true
-                        );
+                            new KeyboardButton[] { "Nein", "Ja" }
+                        )
+                        {
+                            ResizeKeyboard = true,
+                            OneTimeKeyboard = true
+                        };
             }
         }
 
@@ -26,9 +28,11 @@ namespace PrintAssistConsole
             get
             {
                 return new ReplyKeyboardMarkup(
-                            new KeyboardButton[] { "Suche abbrechen", "Neuen Suchbegriff eingeben" },
-                            resizeKeyboard: true
-                        );
+                            new KeyboardButton[] { "Suche abbrechen", "Neuen Suchbegriff eingeben" }
+                        )
+                {
+                    ResizeKeyboard = true
+                };
             }
         }
 
@@ -37,8 +41,10 @@ namespace PrintAssistConsole
             get
             {
                 return new ReplyKeyboardMarkup(
-                            new KeyboardButton[] { "Expert", "Beginner" },
-                            resizeKeyboard: true);
+                            new KeyboardButton[] { "Expert", "Beginner" })
+                {
+                    ResizeKeyboard = true
+                };
             }
         }
 
@@ -47,8 +53,10 @@ namespace PrintAssistConsole
             get
             {
                 return new ReplyKeyboardMarkup(
-                            new KeyboardButton[] { "0,07 mm", "0,1 mm", "0,15 mm", "0,2 mm", "0,25 mm", "0,3 mm" },
-                            resizeKeyboard: true);
+                            new KeyboardButton[] { "0,07 mm", "0,1 mm", "0,15 mm", "0,2 mm", "0,25 mm", "0,3 mm" })
+                {
+                    ResizeKeyboard= true
+                };
             }
         }
         public static ReplyKeyboardMarkup InfillKeyboard
@@ -56,8 +64,11 @@ namespace PrintAssistConsole
             get
             {
                 return new ReplyKeyboardMarkup(
-                            new KeyboardButton[] { "15%", "20%", "25%", "50%", "75%", "100%" },
-                            resizeKeyboard: true);
+                            new KeyboardButton[] { "15%", "20%", "25%", "50%", "75%", "100%" }
+                            )
+                {
+                    ResizeKeyboard=true
+                };
             }
         }
 

@@ -178,7 +178,8 @@ namespace PrintAssistConsole
 
 
             machine.Configure(ConversationState.Printing)
-               .OnEntryAsync(async () => await StartPrinting());
+               .OnEntryAsync(async () => await StartPrinting())
+               .Permit(Trigger.Cancel, ConversationState.Idle);
 
         }
 
@@ -188,18 +189,21 @@ namespace PrintAssistConsole
             // gcode hochladen
             // druck starten
 
-            printStarted = true;
-            calibrationFinished = false;
-            firstTemperatureReceivedMessage = true;
-            updateTemperatureMessage = true;
-            temperatureReached = false;
-            octoprinServer = new OctoprintServer("192.168.2.197", "F1D0D415AF734647B739B34E8B55304F"); //move api key to appsettings.json. this octopi instance is only reachable from local network
-            octoprinServer.TemperatureReceived += OctoprinServer_TemperatureReceived;
-            octoprinServer.PrinterHoming += OctoprinServer_PrinterHoming;
-            octoprinServer.CalibrationFinishedAndWaitingForFinalTemperature += OctoprinServer_CalibrationFinishedAndWaitingForFinalTemperature;
-            var tmp = octoprinServer.GeneralOperations.Login();
-            await octoprinServer.StartWebsocketAsync(tmp.name, tmp.session);
-            await octoprinServer.FileOperations.UploadFileAsync(lastGcodeFile, "local", true, true);
+            await SendMessageAsync("Demo beendet.");
+            await machine.FireAsync(Trigger.Cancel);
+
+            //printStarted = true;
+            //calibrationFinished = false;
+            //firstTemperatureReceivedMessage = true;
+            //updateTemperatureMessage = true;
+            //temperatureReached = false;
+            //octoprinServer = new OctoprintServer("192.168.2.197", "F1D0D415AF734647B739B34E8B55304F"); //move api key to appsettings.json. this octopi instance is only reachable from local network
+            //octoprinServer.TemperatureReceived += OctoprinServer_TemperatureReceived;
+            //octoprinServer.PrinterHoming += OctoprinServer_PrinterHoming;
+            //octoprinServer.CalibrationFinishedAndWaitingForFinalTemperature += OctoprinServer_CalibrationFinishedAndWaitingForFinalTemperature;
+            //var tmp = octoprinServer.GeneralOperations.Login();
+            //await octoprinServer.StartWebsocketAsync(tmp.name, tmp.session);
+            //await octoprinServer.FileOperations.UploadFileAsync(lastGcodeFile, "local", true, true);
         }
 
         private async void OctoprinServer_CalibrationFinishedAndWaitingForFinalTemperature(object sender, int args)
@@ -325,7 +329,7 @@ namespace PrintAssistConsole
         private async void SlicingProcess_SlicingProcessCompletedWithStartPrint(object sender, string gcodeLink)
         {
             
-            var gcodeUri = new Uri("http://localhost:5003" + gcodeLink);
+            var gcodeUri = new Uri("http://localhost:8080" + gcodeLink);
             await DownloadGcodeAsync(gcodeUri);
 
             await machine.FireAsync(Trigger.SlicingCompletedWithPrintStart);
@@ -459,7 +463,7 @@ namespace PrintAssistConsole
                         }
                     }
 
-                    await bot.SendMediaGroupAsync(chatId: id, inputMedia: album);
+                    await bot.SendMediaGroupAsync(chatId: id, media: album);
 
                     foreach (var stream in tmp)
                     {
@@ -500,7 +504,7 @@ namespace PrintAssistConsole
                         }
                     }
 
-                    await bot.SendMediaGroupAsync(chatId: id, inputMedia: album);
+                    await bot.SendMediaGroupAsync(chatId: id, media: album);
                 }
             }
             #endregion
@@ -719,8 +723,8 @@ namespace PrintAssistConsole
                                 case DefaultFallbackIntent defaultIntent:
                                     {
                                         await SendMessageAsync(defaultIntent.Process(), new ReplyKeyboardMarkup(
-                                                                                        new KeyboardButton[] { resourceManager.GetString("CancelExplanation", currentCulture), resourceManager.GetString("Next", currentCulture) },
-                                                                                        resizeKeyboard: true));
+                                                                                        new KeyboardButton[] { resourceManager.GetString("CancelExplanation", currentCulture), resourceManager.GetString("Next", currentCulture) })
+                                                                                        { ResizeKeyboard = true});
                                         break;
                                     }
                                 default:
@@ -773,8 +777,8 @@ namespace PrintAssistConsole
                                 case DefaultFallbackIntent defaultIntent:
                                     {
                                         await SendMessageAsync(defaultIntent.Process(), new ReplyKeyboardMarkup(
-                                                                                        new KeyboardButton[] { resourceManager.GetString("CancelExplanation", currentCulture), resourceManager.GetString("Next", currentCulture) },
-                                                                                        resizeKeyboard: true));
+                                                                                        new KeyboardButton[] { resourceManager.GetString("CancelExplanation", currentCulture), resourceManager.GetString("Next", currentCulture) })
+                                                                                        { ResizeKeyboard = true});
                                         break;
                                     }
                                 default:
